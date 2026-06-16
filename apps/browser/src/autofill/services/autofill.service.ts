@@ -574,8 +574,49 @@ export default class AutofillService implements AutofillServiceInterface {
       return null;
     }
     const tabUrl = tab.url;
+    let continuingMultiStepLogin = false;
+
     if (fromCommand) {
-      cipher = await this.cipherService.getNextCipherForUrl(tabUrl, activeUserId);
+      const multiStepLoginContinuationWindowMs = 2 * 60 * 1000;
+
+      const pageHasPasswordField = pageDetails.some(
+        (pd) =>
+          AutofillService.loadPasswordFields(pd.details, false, false, false, true, undefined)
+            .length > 0,
+      );
+
+      const pageHasViewableUsernameField = pageDetails.some((pd) =>
+        pd.details.fields.some(
+          (field) =>
+            field.viewable &&
+            ["email", "tel", "text"].some((type) => type === field.type) &&
+            fieldContainsKeyword(field, AutoFillConstants.UsernameFieldNames) &&
+            !isNonLoginUsernameField(field, pd.details),
+        ),
+      );
+
+      const pageLooksLikePasswordStep = pageHasPasswordField && !pageHasViewableUsernameField;
+
+      if (pageLooksLikePasswordStep) {
+        const lastUsedCipher = await this.cipherService.getLastUsedForUrl(
+          tabUrl,
+          activeUserId,
+          true,
+        );
+        const lastUsedDate = lastUsedCipher?.localData?.lastUsedDate;
+        const lastUsedRecently =
+          typeof lastUsedDate === "number" &&
+          Date.now().valueOf() - lastUsedDate < multiStepLoginContinuationWindowMs;
+
+        if (lastUsedCipher && lastUsedRecently) {
+          cipher = lastUsedCipher;
+          continuingMultiStepLogin = true;
+        } else {
+          cipher = await this.cipherService.getNextCipherForUrl(tabUrl, activeUserId);
+        }
+      } else {
+        cipher = await this.cipherService.getNextCipherForUrl(tabUrl, activeUserId);
+      }
     } else {
       const lastLaunchedCipher = await this.cipherService.getLastLaunchedForUrl(
         tabUrl,
@@ -599,7 +640,7 @@ export default class AutofillService implements AutofillServiceInterface {
     }
 
     if (await this.isPasswordRepromptRequired(cipher, tab)) {
-      if (fromCommand) {
+      if (fromCommand && !continuingMultiStepLogin) {
         this.cipherService.updateLastUsedIndexForUrl(tabUrl);
       }
 
@@ -620,7 +661,7 @@ export default class AutofillService implements AutofillServiceInterface {
     });
 
     // Update last used index as autofill has succeeded
-    if (fromCommand) {
+    if (fromCommand && !continuingMultiStepLogin) {
       this.cipherService.updateLastUsedIndexForUrl(tabUrl);
     }
 
@@ -1045,6 +1086,8 @@ export default class AutofillService implements AutofillServiceInterface {
     let username: AutofillField | null = null;
     let totp: AutofillField | null = null;
     const login = options.cipher.login;
+    const hasLoginTotp =
+      options.allowTotpAutofill && typeof login.totp === "string" && login.totp.length > 0;
     const loginURIs = login?.uris ?? [];
     fillScript.savedUrls = loginURIs.reduce<string[]>((acc, savedURI) => {
       if (savedURI.match != UriMatchStrategy.Never && savedURI.uri != null) {
@@ -1168,7 +1211,7 @@ export default class AutofillService implements AutofillServiceInterface {
         }
       }
 
-      if (options.allowTotpAutofill && login.totp) {
+      if (hasLoginTotp) {
         totp =
           isFocusedTotpField && passwordMatchesFocused(passField)
             ? focusedField
@@ -1244,7 +1287,7 @@ export default class AutofillService implements AutofillServiceInterface {
         }
 
         const isTotpCandidate =
-          options.allowTotpAutofill &&
+          hasLoginTotp &&
           ["number", "tel", "text"].some((t) => t === field.type) &&
           !fieldContainsKeyword(field, [...AutoFillConstants.RecoveryCodeFieldNames]);
 
@@ -1262,16 +1305,19 @@ export default class AutofillService implements AutofillServiceInterface {
           fieldContainsKeyword(field, AutoFillConstants.UsernameFieldNames) &&
           !isNonLoginUsernameField(field, pageDetails);
 
-        // Reliable TOTP signals win unconditionally; username wins over ambiguous TOTP signals.
+        // When command-triggered TOTP autofill is available, code-like fields should win
+        // over username-only fill on no-password pages. This avoids filling usernames into
+        // MFA/security-code fields whose attributes contain broad username words like
+        // "login" or "user".
         switch (true) {
           case isTotpField:
             totps.push(field);
             return;
-          case isUsernameField:
-            usernames.set(field.opid, field);
-            return;
           case maybeTotpField:
             totps.push(field);
+            return;
+          case isUsernameField:
+            usernames.set(field.opid, field);
             return;
           default:
             return;
