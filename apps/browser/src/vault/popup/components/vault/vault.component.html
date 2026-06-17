@@ -126,6 +126,13 @@
         @if (!(loading$ | async)) {
           <!--If there is search text fold all the filtered ciphers into one container-->
           @if (hasSearchText$ | async) {
+            <!-- Display matching collections above search results when available -->
+            @let matchingCollections = (filteredCollections$ | async) || [];
+            @if (matchingCollections.length > 0) {
+              <app-vault-search-collections
+                [collections]="matchingCollections"
+              ></app-vault-search-collections>
+            }
             <app-vault-list-items-container
               [title]="'searchResults' | i18n"
               [ciphers]="(filteredCiphers$ | async) || []"

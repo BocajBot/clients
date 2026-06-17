@@ -14,12 +14,14 @@ import {
   startWith,
   Subject,
   switchMap,
+  take,
   tap,
   withLatestFrom,
 } from "rxjs";
 
 import { CollectionService } from "@bitwarden/admin-console/common";
 import { OrganizationService } from "@bitwarden/common/admin-console/abstractions/organization/organization.service.abstraction";
+import { CollectionView } from "@bitwarden/common/admin-console/models/collections";
 import { AccountService } from "@bitwarden/common/auth/abstractions/account.service";
 import { getUserId } from "@bitwarden/common/auth/services/account.service";
 import { SyncService } from "@bitwarden/common/platform/sync";
@@ -29,6 +31,7 @@ import { SearchService } from "@bitwarden/common/vault/abstractions/search.servi
 import { VaultSettingsService } from "@bitwarden/common/vault/abstractions/vault-settings/vault-settings.service";
 import { CipherType } from "@bitwarden/common/vault/enums";
 import { RestrictedItemTypesService } from "@bitwarden/common/vault/services/restricted-item-types.service";
+import { normalizeSearchQuery } from "@bitwarden/common/vault/services/search.service";
 import {
   CipherViewLike,
   CipherViewLikeUtils,
@@ -74,6 +77,33 @@ export class VaultPopupItemsService {
 
   private decryptedCollections$ = this.activeUserId$.pipe(
     switchMap((userId) => this.collectionService.decryptedCollections$(userId)),
+  );
+
+  /** Collections whose names match the current searchable text. */
+  filteredCollections$: Observable<CollectionView[]> = combineLatest([
+    this.decryptedCollections$,
+    this.searchText$,
+    this.vaultPopupListFiltersService.filters$,
+  ]).pipe(
+    switchMap(async ([collections, searchText, filters]) => {
+      if (filters.collection != null) {
+        return [];
+      }
+
+      const text = (searchText ?? "").trim();
+
+      if (!(await this.searchService.isSearchable(text))) {
+        return [];
+      }
+
+      const normalize = (value: string) => normalizeSearchQuery(value).toLowerCase();
+      const normalizedQuery = normalize(text);
+
+      return collections.filter((collection) =>
+        normalize(collection.name ?? "").includes(normalizedQuery),
+      );
+    }),
+    shareReplay({ refCount: true, bufferSize: 1 }),
   );
 
   /**
@@ -269,11 +299,12 @@ export class VaultPopupItemsService {
   cipherCount$: Observable<number> = this._activeCipherList$.pipe(map((ciphers) => ciphers.length));
 
   /**
-   * Observable that indicates whether there are no ciphers to show with the current filter.
+   * Observable that indicates whether there are no results to show with the current filter.
    */
-  noFilteredResults$: Observable<boolean> = this._filteredCipherList$.pipe(
-    map((ciphers) => !ciphers.length),
-  );
+  noFilteredResults$: Observable<boolean> = combineLatest([
+    this._filteredCipherList$,
+    this.filteredCollections$,
+  ]).pipe(map(([ciphers, collections]) => !ciphers.length && !collections.length));
 
   /** Observable that indicates when the user should see the deactivated org state */
   showDeactivatedOrg$: Observable<boolean> = combineLatest([
@@ -330,6 +361,27 @@ export class VaultPopupItemsService {
     private ngZone: NgZone,
     private restrictedItemTypesService: RestrictedItemTypesService,
   ) {}
+
+  /** Selects a collection filter from search results and clears the search text. */
+  openCollection(collection: CollectionView): void {
+    this.vaultPopupListFiltersService.collections$.pipe(take(1)).subscribe((collectionOptions) => {
+      const flattenOptions = (options: typeof collectionOptions): typeof collectionOptions =>
+        options.flatMap((option) => [option, ...flattenOptions(option.children ?? [])]);
+
+      const selectedCollection =
+        flattenOptions(collectionOptions).find((option) => option.value?.id === collection.id)
+          ?.value ?? collection;
+
+      this.vaultPopupListFiltersService.filterForm.patchValue({
+        organization: null,
+        collection: selectedCollection,
+        folder: null,
+        cipherType: null,
+      });
+
+      this.applyFilter("");
+    });
+  }
 
   applyFilter(newSearchText: string) {
     this.cachedSearchText.set(newSearchText);

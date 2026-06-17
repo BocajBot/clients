@@ -1,0 +1,24 @@
+@if (collections().length > 0) {
+  <bit-section [disableMargin]="true">
+    <bit-section-header>
+      <h2 bitTypography="h6">{{ "collections" | i18n }}</h2>
+    </bit-section-header>
+    <bit-item-group>
+      @for (collection of collections(); track collection.id) {
+        <bit-item class="tw-group/vault-item">
+          <button
+            bit-item-content
+            type="button"
+            (click)="openCollection(collection)"
+            class="tw-h-[52px]"
+          >
+            <div slot="start" class="tw-justify-start tw-w-7 tw-flex">
+              <bit-icon name="bwi-folder" class="tw-text-main"></bit-icon>
+            </div>
+            <span data-testid="collection-name">{{ collection.name }}</span>
+          </button>
+        </bit-item>
+      }
+    </bit-item-group>
+  </bit-section>
+}
