@@ -71,6 +71,7 @@
     "@storybook/angular": "10.3.6",
     "@storybook/test-runner": "0.24.3",
     "@storybook/web-components-vite": "10.3.6",
+    "@swc-node/register": "1.11.1",
     "@tailwindcss/container-queries": "0.1.1",
     "@types/chrome": "0.1.28",
     "@types/firefox-webext-browser": "143.0.0",

@@ -7,18 +7,16 @@ module.exports = (webpackConfig, context) => {
 
   if (isNxBuild) {
     // Nx build configuration
+    const contextEnv = context.options.env ?? {};
+    Object.keys(contextEnv).forEach((key) => {
+      process.env[key] = contextEnv[key];
+    });
+
     const mode = context.options.mode || "development";
     if (process.env.NODE_ENV == null) {
       process.env.NODE_ENV = mode;
     }
-    const ENV = (process.env.ENV = process.env.NODE_ENV);
-
-    // Set environment variables from Nx context
-    if (context.options.env) {
-      Object.keys(context.options.env).forEach((key) => {
-        process.env[key] = context.options.env[key];
-      });
-    }
+    const ENV = (process.env.ENV = contextEnv.ENV ?? contextEnv.NODE_ENV ?? mode);
 
     return buildConfig({
       configName: "Commercial",
@@ -28,8 +26,10 @@ module.exports = (webpackConfig, context) => {
       },
       background: {
         entry: path.resolve(__dirname, "src/platform/background.ts"),
+        tsConfig: path.resolve(__dirname, "tsconfig.background.json"),
       },
       tsConfig: path.resolve(__dirname, "tsconfig.build.json"),
+      mv2TsConfig: path.resolve(__dirname, "tsconfig.build.mv2.json"),
       outputPath:
         context.context && context.context.root
           ? path.resolve(context.context.root, context.options.outputPath)
@@ -53,8 +53,10 @@ module.exports = (webpackConfig, context) => {
       },
       background: {
         entry: path.resolve(__dirname, "src/platform/background.ts"),
+        tsConfig: path.resolve(__dirname, "tsconfig.background.json"),
       },
       tsConfig: path.resolve(__dirname, "tsconfig.json"),
+      mv2TsConfig: path.resolve(__dirname, "tsconfig.build.mv2.json"),
       importAliases: [
         {
           name: "@bitwarden/sdk-internal",

@@ -16,6 +16,7 @@
     "src/autofill/content/content-message-handler.ts",
     "src/autofill/fido2/content/fido2-content-script.ts",
     "src/autofill/fido2/content/fido2-page-script.ts",
+    "src/autofill/fido2/content/fido2-page-script-delay-append.mv2.ts",
     "src/platform/ipc/content/ipc-content-script.ts",
     "src/platform/offscreen-document/offscreen-document.ts",
     "src/autofill/notification/bootstrap-bar.ts",

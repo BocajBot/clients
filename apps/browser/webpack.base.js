@@ -22,6 +22,59 @@ const DEFAULT_PARAMS = {
   outputPath: path.resolve(__dirname, "build"),
 };
 
+const sassSilencedDeprecations = ["color-functions", "global-builtin", "import"];
+
+function cacheConfig(name, params, ENV, browser, manifestVersion, sourceMaps) {
+  return {
+    type: "filesystem",
+    name: [
+      "browser",
+      params.configName,
+      name,
+      browser,
+      `mv${manifestVersion}`,
+      ENV,
+      sourceMaps ? "sourcemaps" : "no-sourcemaps",
+    ].join("-"),
+    cacheDirectory: path.resolve(__dirname, "../../node_modules/.cache/webpack-browser"),
+    buildDependencies: {
+      config: [__filename, path.resolve(__dirname, "../../babel.config.json")],
+    },
+  };
+}
+
+function isBackgroundOutputAsset(assetPath) {
+  return (
+    assetPath === "background.js" ||
+    assetPath === "background.js.map" ||
+    assetPath === "background.html" ||
+    assetPath === "vendor.js" ||
+    assetPath.endsWith(".background.js") ||
+    assetPath.endsWith(".background.js.map") ||
+    assetPath.endsWith(".background.module.wasm") ||
+    /^[^/]+\.module\.wasm$/.test(assetPath)
+  );
+}
+
+function shouldKeepDuringMainClean(assetPath, sourceMaps) {
+  if (!sourceMaps && assetPath.endsWith(".map")) {
+    return false;
+  }
+
+  return (
+    assetPath === "background.js" ||
+    assetPath === "background.html" ||
+    assetPath === "vendor.js" ||
+    assetPath.endsWith(".background.js") ||
+    assetPath.endsWith(".background.module.wasm") ||
+    (sourceMaps && (assetPath === "background.js.map" || assetPath.endsWith(".background.js.map")))
+  );
+}
+
+function shouldKeepDuringBackgroundClean(assetPath) {
+  return !isBackgroundOutputAsset(assetPath);
+}
+
 /**
  * @param {{
  *  configName: string;
@@ -31,8 +84,10 @@ const DEFAULT_PARAMS = {
  *  };
  *  background: {
  *    entry: string;
+ *    tsConfig?: string;
  *  };
  *  tsConfig: string;
+ *  mv2TsConfig?: string;
  *  outputPath?: string;
  *  mode?: string;
  *  env?: string;
@@ -48,6 +103,9 @@ module.exports.buildConfig = function buildConfig(params) {
   }
 
   const { ENV, manifestVersion, browser } = module.exports.getEnv(params);
+  const sourceMaps = ENV === "development" || process.env.BW_ENABLE_SOURCE_MAPS === "true";
+  const mainTsConfig =
+    manifestVersion === 2 && params.mv2TsConfig ? params.mv2TsConfig : params.tsConfig;
 
   console.log(`Building Manifest Version ${manifestVersion} app - ${params.configName} version`);
 
@@ -103,13 +161,19 @@ module.exports.buildConfig = function buildConfig(params) {
           loader: "sass-loader",
           options: {
             sourceMap: true,
+            sassOptions: {
+              silenceDeprecations: sassSilencedDeprecations,
+            },
           },
         },
       ],
     },
     {
       test: /\.[cm]?js$/,
-      exclude: /\.wasm\.js$/,
+      exclude: (modulePath) =>
+        /\.wasm\.js$/.test(modulePath) ||
+        (modulePath.includes(`${path.sep}node_modules${path.sep}`) &&
+          !modulePath.includes(`${path.sep}node_modules${path.sep}@angular${path.sep}`)),
       use: [
         {
           loader: "babel-loader",
@@ -122,16 +186,20 @@ module.exports.buildConfig = function buildConfig(params) {
       ],
     },
     {
-      test: /\.[jt]sx?$/,
+      test: /\.[cm]?tsx?$/,
       loader: "@ngtools/webpack",
     },
   ];
 
   const requiredPlugins = [
-    new webpack.SourceMapDevToolPlugin({
-      exclude: [/content\/.*/, /notification\/.*/, /overlay\/.*/],
-      filename: "[file].map",
-    }),
+    ...(sourceMaps
+      ? [
+          new webpack.SourceMapDevToolPlugin({
+            exclude: [/content\/.*/, /notification\/.*/, /overlay\/.*/],
+            filename: "[file].map",
+          }),
+        ]
+      : []),
     new webpack.DefinePlugin({
       "process.env": {
         ENV: JSON.stringify(ENV),
@@ -201,9 +269,9 @@ module.exports.buildConfig = function buildConfig(params) {
       chunkFilename: "chunk-[id].css",
     }),
     new AngularWebpackPlugin({
-      tsconfig: params.tsConfig,
+      tsconfig: mainTsConfig,
       entryModule: params.popup.entryModule,
-      sourceMap: true,
+      sourceMap: sourceMaps,
     }),
     new webpack.ProvidePlugin({
       process: "process/browser.js",
@@ -291,20 +359,7 @@ module.exports.buildConfig = function buildConfig(params) {
       ),
       ...params.additionalEntries,
     },
-    cache:
-      ENV !== "development"
-        ? false
-        : {
-            type: "filesystem",
-            name: "main-cache",
-            cacheDirectory: path.resolve(
-              __dirname,
-              "../../node_modules/.cache/webpack-browser-main",
-            ),
-            buildDependencies: {
-              config: [__filename],
-            },
-          },
+    cache: cacheConfig("main", params, ENV, browser, manifestVersion, sourceMaps),
     snapshot: {
       unmanagedPaths: [path.resolve(__dirname, "../../node_modules/@bitwarden/")],
     },
@@ -374,7 +429,9 @@ module.exports.buildConfig = function buildConfig(params) {
       chunkFilename: "assets/[name].js",
       webassemblyModuleFilename: "assets/[modulehash].wasm",
       path: params.outputPath,
-      clean: true,
+      clean: {
+        keep: (assetPath) => shouldKeepDuringMainClean(assetPath, sourceMaps),
+      },
       environment: {
         asyncFunction: true,
       },
@@ -463,30 +520,24 @@ module.exports.buildConfig = function buildConfig(params) {
       target: target,
       output: {
         filename: "background.js",
+        webassemblyModuleFilename: "[modulehash].background.module.wasm",
         path: params.outputPath,
+        clean: {
+          keep: shouldKeepDuringBackgroundClean,
+        },
       },
       module: {
         rules: [
           {
             test: /\.tsx?$/,
             loader: "ts-loader",
+            options: {
+              configFile: params.background.tsConfig ?? params.tsConfig,
+            },
           },
         ],
       },
-      cache:
-        ENV !== "development"
-          ? false
-          : {
-              type: "filesystem",
-              name: "background-cache",
-              cacheDirectory: path.resolve(
-                __dirname,
-                "../../node_modules/.cache/webpack-browser-background",
-              ),
-              buildDependencies: {
-                config: [__filename],
-              },
-            },
+      cache: cacheConfig("background", params, ENV, browser, manifestVersion, sourceMaps),
       snapshot: {
         unmanagedPaths: [path.resolve(__dirname, "../../node_modules/@bitwarden/")],
       },
@@ -505,7 +556,6 @@ module.exports.buildConfig = function buildConfig(params) {
         cache: true,
         alias: params.importAliases,
       },
-      dependencies: ["main"],
       plugins: [...requiredPlugins, new AngularCheckPlugin()],
     };
 
