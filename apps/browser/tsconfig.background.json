@@ -4,8 +4,7 @@
     "src/autofill/globals.d.ts",
     "src/platform/globals.d.ts",
     "src/platform/background.ts",
-    "../../libs/common/src/autofill/constants",
-    "../../libs/common/custom-matchers.d.ts"
+    "../../libs/common/src/autofill/constants"
   ],
   "exclude": ["**/*.spec.ts", "**/*.test.ts"]
 }

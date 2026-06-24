@@ -1,4 +1,32 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["**/*.stories.*", "**/*.spec.ts"]
+  "include": [
+    "src/**/*.d.ts",
+    "src/popup/main.ts",
+    "../../apps/browser/src/autofill/globals.d.ts",
+    "../../apps/browser/src/platform/globals.d.ts",
+    "../../apps/browser/src/popup/polyfills.ts",
+    "../../apps/browser/src/autofill/content/trigger-autofill-script-injection.ts",
+    "../../apps/browser/src/autofill/content/bootstrap-autofill.ts",
+    "../../apps/browser/src/autofill/content/bootstrap-autofill-overlay.ts",
+    "../../apps/browser/src/autofill/content/bootstrap-autofill-overlay-menu.ts",
+    "../../apps/browser/src/autofill/content/bootstrap-autofill-overlay-notifications.ts",
+    "../../apps/browser/src/autofill/content/autofiller.ts",
+    "../../apps/browser/src/autofill/content/auto-submit-login.ts",
+    "../../apps/browser/src/autofill/content/context-menu-handler.ts",
+    "../../apps/browser/src/autofill/content/content-message-handler.ts",
+    "../../apps/browser/src/autofill/fido2/content/fido2-content-script.ts",
+    "../../apps/browser/src/autofill/fido2/content/fido2-page-script.ts",
+    "../../apps/browser/src/platform/ipc/content/ipc-content-script.ts",
+    "../../apps/browser/src/platform/offscreen-document/offscreen-document.ts",
+    "../../apps/browser/src/autofill/notification/bootstrap-bar.ts",
+    "../../apps/browser/src/autofill/overlay/inline-menu/pages/button/bootstrap-autofill-inline-menu-button.ts",
+    "../../apps/browser/src/autofill/overlay/inline-menu/pages/list/bootstrap-autofill-inline-menu-list.ts",
+    "../../apps/browser/src/autofill/overlay/inline-menu/pages/menu-container/bootstrap-autofill-inline-menu-container.ts",
+    "../../apps/browser/src/vault/content/send-on-installed-message.ts",
+    "../../apps/browser/src/vault/content/send-popup-open-message.ts",
+    "../../libs/common/src/autofill/constants",
+    "../../bitwarden_license/bit-common/src/platform/sdk/sdk-alias.d.ts"
+  ],
+  "exclude": ["**/*.stories.*", "**/*.spec.ts", "**/*.test.ts"]
 }

@@ -20,6 +20,7 @@ module.exports = (webpackConfig, context) => {
 
     return buildConfig({
       configName: "OSS",
+      configFile: __filename,
       popup: {
         entry: path.resolve(__dirname, "src/popup/main.ts"),
         entryModule: "src/popup/app.module#AppModule",
@@ -41,6 +42,7 @@ module.exports = (webpackConfig, context) => {
     // npm build configuration
     return buildConfig({
       configName: "OSS",
+      configFile: __filename,
       popup: {
         entry: path.resolve(__dirname, "src/popup/main.ts"),
         entryModule: "src/popup/app.module#AppModule",
@@ -49,7 +51,7 @@ module.exports = (webpackConfig, context) => {
         entry: path.resolve(__dirname, "src/platform/background.ts"),
         tsConfig: path.resolve(__dirname, "tsconfig.background.json"),
       },
-      tsConfig: "tsconfig.build.json",
+      tsConfig: path.resolve(__dirname, "tsconfig.build.json"),
       mv2TsConfig: path.resolve(__dirname, "tsconfig.build.mv2.json"),
     });
   }

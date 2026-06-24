@@ -10,6 +10,8 @@ const configurator = require("./config/config");
 const manifest = require("./webpack/manifest");
 const AngularCheckPlugin = require("./webpack/angular-check");
 
+const WORKSPACE_ROOT = path.resolve(__dirname, "../..");
+
 module.exports.getEnv = function getEnv(params) {
   const ENV = params.env || (process.env.ENV = process.env.NODE_ENV);
   const manifestVersion = process.env.MANIFEST_VERSION == 3 ? 3 : 2;
@@ -24,7 +26,7 @@ const DEFAULT_PARAMS = {
 
 const sassSilencedDeprecations = ["color-functions", "global-builtin", "import"];
 
-function cacheConfig(name, params, ENV, browser, manifestVersion, sourceMaps) {
+function cacheConfig(name, params, ENV, browser, manifestVersion, sourceMaps, typeChecks) {
   return {
     type: "filesystem",
     name: [
@@ -35,10 +37,18 @@ function cacheConfig(name, params, ENV, browser, manifestVersion, sourceMaps) {
       `mv${manifestVersion}`,
       ENV,
       sourceMaps ? "sourcemaps" : "no-sourcemaps",
+      typeChecks ? "typechecks" : "no-typechecks",
     ].join("-"),
-    cacheDirectory: path.resolve(__dirname, "../../node_modules/.cache/webpack-browser"),
+    cacheDirectory: path.resolve(WORKSPACE_ROOT, "node_modules/.cache/webpack-browser"),
     buildDependencies: {
-      config: [__filename, path.resolve(__dirname, "../../babel.config.json")],
+      config: [
+        __filename,
+        path.resolve(WORKSPACE_ROOT, "babel.config.json"),
+        params.configFile,
+        params.tsConfig,
+        params.mv2TsConfig,
+        params.background.tsConfig,
+      ].filter(Boolean),
     },
   };
 }
@@ -86,6 +96,7 @@ function shouldKeepDuringBackgroundClean(assetPath) {
  *    entry: string;
  *    tsConfig?: string;
  *  };
+ *  configFile?: string;
  *  tsConfig: string;
  *  mv2TsConfig?: string;
  *  outputPath?: string;
@@ -104,6 +115,7 @@ module.exports.buildConfig = function buildConfig(params) {
 
   const { ENV, manifestVersion, browser } = module.exports.getEnv(params);
   const sourceMaps = ENV === "development" || process.env.BW_ENABLE_SOURCE_MAPS === "true";
+  const typeChecks = ENV !== "development" || process.env.BW_ENABLE_TYPE_CHECKS === "true";
   const mainTsConfig =
     manifestVersion === 2 && params.mv2TsConfig ? params.mv2TsConfig : params.tsConfig;
 
@@ -195,6 +207,7 @@ module.exports.buildConfig = function buildConfig(params) {
     ...(sourceMaps
       ? [
           new webpack.SourceMapDevToolPlugin({
+            columns: false,
             exclude: [/content\/.*/, /notification\/.*/, /overlay\/.*/],
             filename: "[file].map",
           }),
@@ -218,7 +231,13 @@ module.exports.buildConfig = function buildConfig(params) {
     new HtmlWebpackPlugin({
       template: path.resolve(__dirname, "src/popup/index.ejs"),
       filename: "popup/index.html",
-      chunks: ["popup/polyfills", "popup/vendor-angular", "popup/vendor", "popup/main"],
+      chunks: [
+        "popup/polyfills",
+        "popup/vendor-angular",
+        "popup/vendor",
+        "popup/vendor-bitwarden",
+        "popup/main",
+      ],
       browser: browser,
     }),
     new HtmlWebpackPlugin({
@@ -272,6 +291,8 @@ module.exports.buildConfig = function buildConfig(params) {
       tsconfig: mainTsConfig,
       entryModule: params.popup.entryModule,
       sourceMap: sourceMaps,
+      jitMode: ENV === "development",
+      compilerOptions: typeChecks ? undefined : { noCheck: true },
     }),
     new webpack.ProvidePlugin({
       process: "process/browser.js",
@@ -285,6 +306,7 @@ module.exports.buildConfig = function buildConfig(params) {
    */
   const mainConfig = {
     name: "main",
+    context: WORKSPACE_ROOT,
     mode: ENV,
     devtool: false,
 
@@ -359,7 +381,7 @@ module.exports.buildConfig = function buildConfig(params) {
       ),
       ...params.additionalEntries,
     },
-    cache: cacheConfig("main", params, ENV, browser, manifestVersion, sourceMaps),
+    cache: cacheConfig("main", params, ENV, browser, manifestVersion, sourceMaps, typeChecks),
     snapshot: {
       unmanagedPaths: [path.resolve(__dirname, "../../node_modules/@bitwarden/")],
     },
@@ -406,6 +428,22 @@ module.exports.buildConfig = function buildConfig(params) {
               return chunk.name === "popup/main";
             },
           },
+          ...(ENV === "development"
+            ? {
+                bitwarden: {
+                  test(module) {
+                    return (
+                      module.resource != null &&
+                      (module.resource.includes(`${path.sep}libs${path.sep}`) ||
+                        module.resource.includes(`${path.sep}bitwarden_license${path.sep}`))
+                    );
+                  },
+                  name: "popup/vendor-bitwarden",
+                  chunks: (chunk) => chunk.name === "popup/main",
+                  enforce: true,
+                },
+              }
+            : {}),
         },
       },
     },
@@ -513,6 +551,7 @@ module.exports.buildConfig = function buildConfig(params) {
      */
     const backgroundConfig = {
       name: "background",
+      context: WORKSPACE_ROOT,
       mode: ENV,
       devtool: false,
 
@@ -533,11 +572,12 @@ module.exports.buildConfig = function buildConfig(params) {
             loader: "ts-loader",
             options: {
               configFile: params.background.tsConfig ?? params.tsConfig,
+              onlyCompileBundledFiles: true,
             },
           },
         ],
       },
-      cache: cacheConfig("background", params, ENV, browser, manifestVersion, sourceMaps),
+      cache: cacheConfig("background", params, ENV, browser, manifestVersion, sourceMaps, true),
       snapshot: {
         unmanagedPaths: [path.resolve(__dirname, "../../node_modules/@bitwarden/")],
       },
