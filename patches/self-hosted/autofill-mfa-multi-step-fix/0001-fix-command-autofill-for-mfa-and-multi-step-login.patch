@@ -1,0 +1,156 @@
+diff --git a/apps/browser/src/autofill/services/autofill.service.spec.ts b/apps/browser/src/autofill/services/autofill.service.spec.ts
+index 082546843db6cfae755ced6a5e8c215449e35e7f..be35dd7e6b724d5bab4f9ebfbf96225021f6abb1 100644
+--- a/apps/browser/src/autofill/services/autofill.service.spec.ts
++++ b/apps/browser/src/autofill/services/autofill.service.spec.ts
+@@ -2734,10 +2734,11 @@ describe("AutofillService", () => {
+           expect(AutofillService.fillByOpid).toHaveBeenCalledWith(fillScript, totpField, totpCode);
+         });
+ 
+-        it("classifies a field matching AmbiguousTotpFieldNames as username when it also matches username signals", async () => {
++        it("classifies a field matching AmbiguousTotpFieldNames as TOTP when command TOTP autofill is available, even when it also matches username signals", async () => {
++          const totpCode = "123456";
+           options.allowTotpAutofill = true;
+-          // Simulates a username field whose label-left was contaminated with an
+-          // ambiguous TOTP keyword.
++          totpService.getCode$.mockReturnValue(of({ code: totpCode, period: 30 }));
++
+           const ambiguousField = createAutofillFieldMock({
+             opid: "ambiguous-totp",
+             type: "text",
+@@ -2758,6 +2759,11 @@ describe("AutofillService", () => {
+ 
+           expect(AutofillService.fillByOpid).toHaveBeenCalledTimes(1);
+           expect(AutofillService.fillByOpid).toHaveBeenCalledWith(
++            fillScript,
++            ambiguousField,
++            totpCode,
++          );
++          expect(AutofillService.fillByOpid).not.toHaveBeenCalledWith(
+             fillScript,
+             ambiguousField,
+             options.cipher.login.username,
+diff --git a/apps/browser/src/autofill/services/autofill.service.ts b/apps/browser/src/autofill/services/autofill.service.ts
+index 74b4cb92b3f01ca9140c199b9f154670d27ca413..2291cd93f33d1096356f9d1a6a3bae65f524ccfd 100644
+--- a/apps/browser/src/autofill/services/autofill.service.ts
++++ b/apps/browser/src/autofill/services/autofill.service.ts
+@@ -574,8 +574,49 @@ export default class AutofillService implements AutofillServiceInterface {
+       return null;
+     }
+     const tabUrl = tab.url;
++    let continuingMultiStepLogin = false;
++
+     if (fromCommand) {
+-      cipher = await this.cipherService.getNextCipherForUrl(tabUrl, activeUserId);
++      const multiStepLoginContinuationWindowMs = 2 * 60 * 1000;
++
++      const pageHasPasswordField = pageDetails.some(
++        (pd) =>
++          AutofillService.loadPasswordFields(pd.details, false, false, false, true, undefined)
++            .length > 0,
++      );
++
++      const pageHasViewableUsernameField = pageDetails.some((pd) =>
++        pd.details.fields.some(
++          (field) =>
++            field.viewable &&
++            ["email", "tel", "text"].some((type) => type === field.type) &&
++            fieldContainsKeyword(field, AutoFillConstants.UsernameFieldNames) &&
++            !isNonLoginUsernameField(field, pd.details),
++        ),
++      );
++
++      const pageLooksLikePasswordStep = pageHasPasswordField && !pageHasViewableUsernameField;
++
++      if (pageLooksLikePasswordStep) {
++        const lastUsedCipher = await this.cipherService.getLastUsedForUrl(
++          tabUrl,
++          activeUserId,
++          true,
++        );
++        const lastUsedDate = lastUsedCipher?.localData?.lastUsedDate;
++        const lastUsedRecently =
++          typeof lastUsedDate === "number" &&
++          Date.now().valueOf() - lastUsedDate < multiStepLoginContinuationWindowMs;
++
++        if (lastUsedCipher && lastUsedRecently) {
++          cipher = lastUsedCipher;
++          continuingMultiStepLogin = true;
++        } else {
++          cipher = await this.cipherService.getNextCipherForUrl(tabUrl, activeUserId);
++        }
++      } else {
++        cipher = await this.cipherService.getNextCipherForUrl(tabUrl, activeUserId);
++      }
+     } else {
+       const lastLaunchedCipher = await this.cipherService.getLastLaunchedForUrl(
+         tabUrl,
+@@ -599,7 +640,7 @@ export default class AutofillService implements AutofillServiceInterface {
+     }
+ 
+     if (await this.isPasswordRepromptRequired(cipher, tab)) {
+-      if (fromCommand) {
++      if (fromCommand && !continuingMultiStepLogin) {
+         this.cipherService.updateLastUsedIndexForUrl(tabUrl);
+       }
+ 
+@@ -620,7 +661,7 @@ export default class AutofillService implements AutofillServiceInterface {
+     });
+ 
+     // Update last used index as autofill has succeeded
+-    if (fromCommand) {
++    if (fromCommand && !continuingMultiStepLogin) {
+       this.cipherService.updateLastUsedIndexForUrl(tabUrl);
+     }
+ 
+@@ -1045,6 +1086,8 @@ export default class AutofillService implements AutofillServiceInterface {
+     let username: AutofillField | null = null;
+     let totp: AutofillField | null = null;
+     const login = options.cipher.login;
++    const hasLoginTotp =
++      options.allowTotpAutofill && typeof login.totp === "string" && login.totp.length > 0;
+     const loginURIs = login?.uris ?? [];
+     fillScript.savedUrls = loginURIs.reduce<string[]>((acc, savedURI) => {
+       if (savedURI.match != UriMatchStrategy.Never && savedURI.uri != null) {
+@@ -1168,7 +1211,7 @@ export default class AutofillService implements AutofillServiceInterface {
+         }
+       }
+ 
+-      if (options.allowTotpAutofill && login.totp) {
++      if (hasLoginTotp) {
+         totp =
+           isFocusedTotpField && passwordMatchesFocused(passField)
+             ? focusedField
+@@ -1244,7 +1287,7 @@ export default class AutofillService implements AutofillServiceInterface {
+         }
+ 
+         const isTotpCandidate =
+-          options.allowTotpAutofill &&
++          hasLoginTotp &&
+           ["number", "tel", "text"].some((t) => t === field.type) &&
+           !fieldContainsKeyword(field, [...AutoFillConstants.RecoveryCodeFieldNames]);
+ 
+@@ -1262,17 +1305,20 @@ export default class AutofillService implements AutofillServiceInterface {
+           fieldContainsKeyword(field, AutoFillConstants.UsernameFieldNames) &&
+           !isNonLoginUsernameField(field, pageDetails);
+ 
+-        // Reliable TOTP signals win unconditionally; username wins over ambiguous TOTP signals.
++        // When command-triggered TOTP autofill is available, code-like fields should win
++        // over username-only fill on no-password pages. This avoids filling usernames into
++        // MFA/security-code fields whose attributes contain broad username words like
++        // "login" or "user".
+         switch (true) {
+           case isTotpField:
+             totps.push(field);
+             return;
+-          case isUsernameField:
+-            usernames.set(field.opid, field);
+-            return;
+           case maybeTotpField:
+             totps.push(field);
+             return;
++          case isUsernameField:
++            usernames.set(field.opid, field);
++            return;
+           default:
+             return;
+         }

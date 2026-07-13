@@ -1,0 +1,405 @@
+diff --git a/apps/browser/src/vault/popup/components/vault/index.ts b/apps/browser/src/vault/popup/components/vault/index.ts
+index 13618d007d2366dbe04f1538e7cdc09a91f47727..734a9692dce4df1482d8d87d827d33fe65bcd18e 100644
+--- a/apps/browser/src/vault/popup/components/vault/index.ts
++++ b/apps/browser/src/vault/popup/components/vault/index.ts
+@@ -1,2 +1,3 @@
+ export * from "./vault-list-items-container/vault-list-items-container.component";
+ export * from "./autofill-vault-list-items/autofill-vault-list-items.component";
++export * from "./vault-search-collections/vault-search-collections.component";
+diff --git a/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.html b/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.html
+new file mode 100644
+index 0000000000000000000000000000000000000000..0deca5c2f5b9d7a85fe23bf33a2da7a093810c9a
+--- /dev/null
++++ b/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.html
+@@ -0,0 +1,24 @@
++@if (collections().length > 0) {
++  <bit-section [disableMargin]="true">
++    <bit-section-header>
++      <h2 bitTypography="h6">{{ "collections" | i18n }}</h2>
++    </bit-section-header>
++    <bit-item-group>
++      @for (collection of collections(); track collection.id) {
++        <bit-item class="tw-group/vault-item">
++          <button
++            bit-item-content
++            type="button"
++            (click)="openCollection(collection)"
++            class="tw-h-[52px]"
++          >
++            <div slot="start" class="tw-justify-start tw-w-7 tw-flex">
++              <bit-icon name="bwi-folder" class="tw-text-main"></bit-icon>
++            </div>
++            <span data-testid="collection-name">{{ collection.name }}</span>
++          </button>
++        </bit-item>
++      }
++    </bit-item-group>
++  </bit-section>
++}
+diff --git a/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.ts b/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..99a55534cfe5cd87a681e307aa1747b915ccfcd7
+--- /dev/null
++++ b/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.ts
+@@ -0,0 +1,39 @@
++import { CommonModule } from "@angular/common";
++import { Component, ChangeDetectionStrategy, inject, input } from "@angular/core";
++
++import { JslibModule } from "@bitwarden/angular/jslib.module";
++import { CollectionView } from "@bitwarden/common/admin-console/models/collections";
++import {
++  SectionComponent,
++  SectionHeaderComponent,
++  ItemModule,
++  IconComponent,
++  TypographyModule,
++} from "@bitwarden/components";
++
++import { VaultPopupItemsService } from "../../../services/vault-popup-items.service";
++
++@Component({
++  selector: "app-vault-search-collections",
++  standalone: true,
++  imports: [
++    CommonModule,
++    JslibModule,
++    SectionComponent,
++    SectionHeaderComponent,
++    ItemModule,
++    IconComponent,
++    TypographyModule,
++  ],
++  templateUrl: "./vault-search-collections.component.html",
++  changeDetection: ChangeDetectionStrategy.OnPush,
++})
++export class VaultSearchCollectionsComponent {
++  readonly collections = input<CollectionView[]>([]);
++
++  private readonly vaultPopupItemsService = inject(VaultPopupItemsService);
++
++  openCollection(collection: CollectionView): void {
++    this.vaultPopupItemsService.openCollection(collection);
++  }
++}
+diff --git a/apps/browser/src/vault/popup/components/vault/vault-search/vault-search.component.ts b/apps/browser/src/vault/popup/components/vault/vault-search/vault-search.component.ts
+index 9ce26a6310d489dd52d0846d5458b811f81bfa66..3ad3d40a2e2f101c6d87c0c64b60e19e10ce6d82 100644
+--- a/apps/browser/src/vault/popup/components/vault/vault-search/vault-search.component.ts
++++ b/apps/browser/src/vault/popup/components/vault/vault-search/vault-search.component.ts
+@@ -8,7 +8,6 @@ import {
+   combineLatest,
+   debounce,
+   distinctUntilChanged,
+-  filter,
+   map,
+   timer,
+ } from "rxjs";
+@@ -47,14 +46,9 @@ export class VaultSearchComponent {
+   }
+ 
+   subscribeToLatestSearchText(): Subscription {
+-    return this.vaultPopupItemsService.searchText$
+-      .pipe(
+-        takeUntilDestroyed(),
+-        filter((data) => !!data),
+-      )
+-      .subscribe((text) => {
+-        this.searchText = text;
+-      });
++    return this.vaultPopupItemsService.searchText$.pipe(takeUntilDestroyed()).subscribe((text) => {
++      this.searchText = text ?? "";
++    });
+   }
+ 
+   subscribeToApplyFilter(): void {
+diff --git a/apps/browser/src/vault/popup/components/vault/vault.component.html b/apps/browser/src/vault/popup/components/vault/vault.component.html
+index ac813d06d3e435228b1ea9d4f08ca09aa619491b..29a45552862bc7bc65312d001dd6b0797c0c9e40 100644
+--- a/apps/browser/src/vault/popup/components/vault/vault.component.html
++++ b/apps/browser/src/vault/popup/components/vault/vault.component.html
+@@ -126,6 +126,13 @@
+         @if (!(loading$ | async)) {
+           <!--If there is search text fold all the filtered ciphers into one container-->
+           @if (hasSearchText$ | async) {
++            <!-- Display matching collections above search results when available -->
++            @let matchingCollections = (filteredCollections$ | async) || [];
++            @if (matchingCollections.length > 0) {
++              <app-vault-search-collections
++                [collections]="matchingCollections"
++              ></app-vault-search-collections>
++            }
+             <app-vault-list-items-container
+               [title]="'searchResults' | i18n"
+               [ciphers]="(filteredCiphers$ | async) || []"
+diff --git a/apps/browser/src/vault/popup/components/vault/vault.component.ts b/apps/browser/src/vault/popup/components/vault/vault.component.ts
+index 69c2e9501f501be2e8d55918b61b724659a803cf..47bea04154bb98c1bb59ff6f87b867e2e4112e65 100644
+--- a/apps/browser/src/vault/popup/components/vault/vault.component.ts
++++ b/apps/browser/src/vault/popup/components/vault/vault.component.ts
+@@ -78,7 +78,11 @@ import {
+ } from "./new-item-dropdown/new-item-dropdown.component";
+ import { VaultHeaderComponent } from "./vault-header/vault-header.component";
+ 
+-import { AutofillVaultListItemsComponent, VaultListItemsContainerComponent } from ".";
++import {
++  AutofillVaultListItemsComponent,
++  VaultListItemsContainerComponent,
++  VaultSearchCollectionsComponent,
++} from ".";
+ 
+ const VaultState = {
+   Empty: 0,
+@@ -104,6 +108,7 @@ type VaultState = UnionOfValues<typeof VaultState>;
+     CommonModule,
+     AutofillVaultListItemsComponent,
+     VaultListItemsContainerComponent,
++    VaultSearchCollectionsComponent,
+     ButtonModule,
+     NewItemDropdownComponent,
+     ScrollingModule,
+@@ -165,6 +170,13 @@ export class VaultComponent implements OnInit, OnDestroy {
+   protected allFilters$ = this.vaultPopupListFiltersService.allFilters$;
+   protected cipherCount$ = this.vaultPopupItemsService.cipherCount$;
+ 
++  /**
++   * List of collections matching the current search text. Exposed from
++   * VaultPopupItemsService so the template can render matching collections
++   * above the standard cipher search results.
++   */
++  protected filteredCollections$ = this.vaultPopupItemsService.filteredCollections$;
++
+   protected showPremiumSpotlight$ = combineLatest([
+     this.activeUserId$.pipe(
+       switchMap((userId) =>
+diff --git a/apps/browser/src/vault/popup/services/vault-popup-items.service.spec.ts b/apps/browser/src/vault/popup/services/vault-popup-items.service.spec.ts
+index 45da337f8395fa683f3212be71137e5a15e5b8fe..5339c3d15c99a45b2110a288e951945b90b7e7aa 100644
+--- a/apps/browser/src/vault/popup/services/vault-popup-items.service.spec.ts
++++ b/apps/browser/src/vault/popup/services/vault-popup-items.service.spec.ts
+@@ -413,6 +413,15 @@ describe("VaultPopupItemsService", () => {
+         done();
+       });
+     });
++
++    it("should return false when ciphers are empty but collections match the search text", async () => {
++      cipherServiceMock.cipherListViews$.mockReturnValue(of([]));
++      searchService.isSearchable.mockResolvedValue(true);
++      searchService.searchCiphers.mockResolvedValue([]);
++      service.applyFilter("collection 1");
++
++      await expect(firstValueFrom(service.noFilteredResults$)).resolves.toBe(false);
++    });
+   });
+ 
+   describe("deletedCiphers$", () => {
+@@ -504,6 +513,108 @@ describe("VaultPopupItemsService", () => {
+ 
+     service.applyFilter("test search");
+   });
++
++  describe("filteredCollections$", () => {
++    it("should return collections whose names match the search text (case-insensitive)", async () => {
++      searchService.isSearchable.mockResolvedValue(true);
++      service.applyFilter("collection 1");
++
++      const result = await firstValueFrom(service.filteredCollections$);
++
++      expect(result).toEqual([mockCollections[0]]);
++    });
++
++    it("should ignore diacritics when matching", async () => {
++      searchService.isSearchable.mockResolvedValue(true);
++      collectionService.decryptedCollections$.mockReturnValue(
++        new BehaviorSubject([{ id: "col3", name: "Café" } as CollectionView]),
++      );
++      service.applyFilter("cafe");
++
++      const result = await firstValueFrom(service.filteredCollections$);
++
++      expect(result.map((c) => c.id)).toEqual(["col3"]);
++    });
++
++    it("should return an empty array when no collection name matches", async () => {
++      searchService.isSearchable.mockResolvedValue(true);
++      service.applyFilter("no-such-collection");
++
++      const result = await firstValueFrom(service.filteredCollections$);
++
++      expect(result).toEqual([]);
++    });
++
++    it("should return an empty array when the search text is not searchable", async () => {
++      searchService.isSearchable.mockResolvedValue(false);
++      service.applyFilter("collection 1");
++
++      const result = await firstValueFrom(service.filteredCollections$);
++
++      expect(result).toEqual([]);
++    });
++
++    it("should return an empty array when a collection filter is already active", async () => {
++      searchService.isSearchable.mockResolvedValue(true);
++      (vaultPopupListFiltersServiceMock.filters$ as BehaviorSubject<any>).next({
++        organization: null,
++        collection: mockCollections[0],
++        cipherType: null,
++        folder: null,
++      });
++      service.applyFilter("collection 1");
++
++      const result = await firstValueFrom(service.filteredCollections$);
++
++      expect(result).toEqual([]);
++    });
++  });
++
++  describe("openCollection", () => {
++    let patchValue: jest.Mock;
++
++    beforeEach(() => {
++      patchValue = jest.fn();
++      (vaultPopupListFiltersServiceMock as any).filterForm = { patchValue };
++    });
++
++    it("should reset other filters, select the collection, and clear the search text", () => {
++      const collectionOption = { value: mockCollections[0], children: [] };
++      vaultPopupListFiltersServiceMock.collections$ = of([collectionOption]) as any;
++      const applyFilterSpy = jest.spyOn(service, "applyFilter");
++
++      service.openCollection(mockCollections[0]);
++
++      expect(patchValue).toHaveBeenCalledWith({
++        organization: null,
++        collection: mockCollections[0],
++        folder: null,
++        cipherType: null,
++      });
++      expect(applyFilterSpy).toHaveBeenCalledWith("");
++    });
++
++    it("should resolve a collection nested within a parent option", () => {
++      const child = { value: mockCollections[1], children: [] };
++      const parent = { value: mockCollections[0], children: [child] };
++      vaultPopupListFiltersServiceMock.collections$ = of([parent]) as any;
++
++      service.openCollection(mockCollections[1]);
++
++      expect(patchValue).toHaveBeenCalledWith(
++        expect.objectContaining({ collection: mockCollections[1] }),
++      );
++    });
++
++    it("should fall back to the provided collection when it is not among the options", () => {
++      vaultPopupListFiltersServiceMock.collections$ = of([]) as any;
++      const target = { id: "colX", name: "Collection X" } as CollectionView;
++
++      service.openCollection(target);
++
++      expect(patchValue).toHaveBeenCalledWith(expect.objectContaining({ collection: target }));
++    });
++  });
+ });
+ 
+ // A function to generate a list of ciphers of different types
+diff --git a/apps/browser/src/vault/popup/services/vault-popup-items.service.ts b/apps/browser/src/vault/popup/services/vault-popup-items.service.ts
+index dc0b5f08d365f2db522525a007eddee7e44b1b98..bd03e1c88d58a181aa56e8578ad00b3bdccc40b3 100644
+--- a/apps/browser/src/vault/popup/services/vault-popup-items.service.ts
++++ b/apps/browser/src/vault/popup/services/vault-popup-items.service.ts
+@@ -14,12 +14,14 @@ import {
+   startWith,
+   Subject,
+   switchMap,
++  take,
+   tap,
+   withLatestFrom,
+ } from "rxjs";
+ 
+ import { CollectionService } from "@bitwarden/admin-console/common";
+ import { OrganizationService } from "@bitwarden/common/admin-console/abstractions/organization/organization.service.abstraction";
++import { CollectionView } from "@bitwarden/common/admin-console/models/collections";
+ import { AccountService } from "@bitwarden/common/auth/abstractions/account.service";
+ import { getUserId } from "@bitwarden/common/auth/services/account.service";
+ import { SyncService } from "@bitwarden/common/platform/sync";
+@@ -29,6 +31,7 @@ import { SearchService } from "@bitwarden/common/vault/abstractions/search.servi
+ import { VaultSettingsService } from "@bitwarden/common/vault/abstractions/vault-settings/vault-settings.service";
+ import { CipherType } from "@bitwarden/common/vault/enums";
+ import { RestrictedItemTypesService } from "@bitwarden/common/vault/services/restricted-item-types.service";
++import { normalizeSearchQuery } from "@bitwarden/common/vault/services/search.service";
+ import {
+   CipherViewLike,
+   CipherViewLikeUtils,
+@@ -76,6 +79,33 @@ export class VaultPopupItemsService {
+     switchMap((userId) => this.collectionService.decryptedCollections$(userId)),
+   );
+ 
++  /** Collections whose names match the current searchable text. */
++  filteredCollections$: Observable<CollectionView[]> = combineLatest([
++    this.decryptedCollections$,
++    this.searchText$,
++    this.vaultPopupListFiltersService.filters$,
++  ]).pipe(
++    switchMap(async ([collections, searchText, filters]) => {
++      if (filters.collection != null) {
++        return [];
++      }
++
++      const text = (searchText ?? "").trim();
++
++      if (!(await this.searchService.isSearchable(text))) {
++        return [];
++      }
++
++      const normalize = (value: string) => normalizeSearchQuery(value).toLowerCase();
++      const normalizedQuery = normalize(text);
++
++      return collections.filter((collection) =>
++        normalize(collection.name ?? "").includes(normalizedQuery),
++      );
++    }),
++    shareReplay({ refCount: true, bufferSize: 1 }),
++  );
++
+   /**
+    * Observable that contains the list of other cipher types that should be shown
+    * in the autofill section of the Vault tab. Depends on vault settings.
+@@ -269,11 +299,12 @@ export class VaultPopupItemsService {
+   cipherCount$: Observable<number> = this._activeCipherList$.pipe(map((ciphers) => ciphers.length));
+ 
+   /**
+-   * Observable that indicates whether there are no ciphers to show with the current filter.
++   * Observable that indicates whether there are no results to show with the current filter.
+    */
+-  noFilteredResults$: Observable<boolean> = this._filteredCipherList$.pipe(
+-    map((ciphers) => !ciphers.length),
+-  );
++  noFilteredResults$: Observable<boolean> = combineLatest([
++    this._filteredCipherList$,
++    this.filteredCollections$,
++  ]).pipe(map(([ciphers, collections]) => !ciphers.length && !collections.length));
+ 
+   /** Observable that indicates when the user should see the deactivated org state */
+   showDeactivatedOrg$: Observable<boolean> = combineLatest([
+@@ -331,6 +362,27 @@ export class VaultPopupItemsService {
+     private restrictedItemTypesService: RestrictedItemTypesService,
+   ) {}
+ 
++  /** Selects a collection filter from search results and clears the search text. */
++  openCollection(collection: CollectionView): void {
++    this.vaultPopupListFiltersService.collections$.pipe(take(1)).subscribe((collectionOptions) => {
++      const flattenOptions = (options: typeof collectionOptions): typeof collectionOptions =>
++        options.flatMap((option) => [option, ...flattenOptions(option.children ?? [])]);
++
++      const selectedCollection =
++        flattenOptions(collectionOptions).find((option) => option.value?.id === collection.id)
++          ?.value ?? collection;
++
++      this.vaultPopupListFiltersService.filterForm.patchValue({
++        organization: null,
++        collection: selectedCollection,
++        folder: null,
++        cipherType: null,
++      });
++
++      this.applyFilter("");
++    });
++  }
++
+   applyFilter(newSearchText: string) {
+     this.cachedSearchText.set(newSearchText);
+   }

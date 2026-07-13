@@ -1,0 +1,4 @@
+popup-collection-search/0001-add-collection-search-results.patch|Add collection search results to browser popup
+popup-collection-search/0002-fix-test-fixture-array-types.patch|Fix collection search test fixture array types
+autofill-mfa-multi-step-fix/0001-fix-command-autofill-for-mfa-and-multi-step-login.patch|Fix command autofill for MFA and multi-step login pages
+autofill-mfa-multi-step-fix/0002-add-multi-step-login-continuation-tests.patch|Add multi-step login continuation tests and fixture fix

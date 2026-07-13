@@ -1,0 +1,2 @@
+0001-fix-command-autofill-for-mfa-and-multi-step-login.patch|Fix command autofill for MFA and multi-step login pages
+0002-add-multi-step-login-continuation-tests.patch|Add multi-step login continuation tests and fixture fix

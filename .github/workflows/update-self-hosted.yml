@@ -1,0 +1,53 @@
+name: Update self-hosted Chrome extension
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 9 * * 1"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: self-hosted-extension-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Validate patch syntax
+        run: ./scripts/verify-patches.sh
+
+      - name: Rebuild and push self-hosted branch
+        env:
+          UPSTREAM_REMOTE: origin
+          UPSTREAM_BRANCH: main
+          TARGET_BRANCH: self-hosted
+          PUSH_REMOTE: origin
+          INSTALL_DEPS: "1"
+          RUN_TESTS: "1"
+          BUILD_CHROME: "0"
+          PACKAGE_CHROME: "1"
+          ARTIFACT_DIR: ${{ github.workspace }}/artifacts
+          PUSH: "1"
+        run: ./scripts/update-self-hosted.sh
+
+      - name: Upload Chrome package
+        uses: actions/upload-artifact@v4
+        with:
+          name: self-hosted-chrome-${{ github.run_number }}
+          path: artifacts/self-hosted-chrome-*.zip
+          if-no-files-found: error
+          retention-days: 30
