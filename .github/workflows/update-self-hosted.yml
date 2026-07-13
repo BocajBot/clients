@@ -1,53 +1,257 @@
-name: Update self-hosted Chrome extension
+name: Rebuild self-hosted Chrome extension
 
 on:
   workflow_dispatch:
+
   schedule:
+    # Every Monday at 09:23 UTC.
     - cron: "23 9 * * 1"
+
+  push:
+    branches:
+      - automation
+    paths:
+      - "patches/**"
+      - "scripts/**"
+      - ".github/workflows/update-self-hosted.yml"
 
 permissions:
   contents: write
 
 concurrency:
-  group: self-hosted-extension-update
+  group: self-hosted-extension-release
   cancel-in-progress: false
 
 jobs:
-  update:
+  rebuild:
+    name: Build and publish Chrome extension
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+
     steps:
-      - name: Check out repository
+      - name: Check out automation branch
         uses: actions/checkout@v4
         with:
+          ref: automation
           fetch-depth: 0
+          persist-credentials: true
 
-      - name: Set up Node
+      - name: Configure Git repositories
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git remote remove upstream 2>/dev/null || true
+          git remote add upstream https://github.com/bitwarden/clients.git
+
+          git fetch --no-tags upstream main
+          git fetch --no-tags origin self-hosted || true
+
+      - name: Check whether a rebuild is needed
+        id: check
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+
+          upstream_sha="$(git rev-parse upstream/main)"
+          current_base=""
+
+          if git show-ref --verify --quiet \
+            refs/remotes/origin/self-hosted; then
+            current_base="$(
+              git merge-base upstream/main origin/self-hosted || true
+            )"
+          fi
+
+          rebuild=false
+          reason="No upstream change"
+
+          # Manual runs and automation-branch changes always rebuild.
+          if [[ "$EVENT_NAME" != "schedule" ]]; then
+            rebuild=true
+            reason="Manual run or automation change"
+          elif [[ "$current_base" != "$upstream_sha" ]]; then
+            rebuild=true
+            reason="Official Bitwarden main changed"
+          fi
+
+          {
+            echo "rebuild=$rebuild"
+            echo "reason=$reason"
+            echo "upstream_sha=$upstream_sha"
+            echo "current_base=$current_base"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Rebuild: $rebuild"
+          echo "Reason: $reason"
+          echo "Upstream: $upstream_sha"
+          echo "Current base: ${current_base:-none}"
+
+      - name: Set up Node.js
+        if: steps.check.outputs.rebuild == 'true'
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: npm
 
-      - name: Validate patch syntax
+      - name: Use supported npm version
+        if: steps.check.outputs.rebuild == 'true'
+        run: npm install --global npm@11
+
+      - name: Validate patch files
+        if: steps.check.outputs.rebuild == 'true'
         run: ./scripts/verify-patches.sh
 
-      - name: Rebuild and push self-hosted branch
-        env:
-          UPSTREAM_REMOTE: origin
-          UPSTREAM_BRANCH: main
-          TARGET_BRANCH: self-hosted
-          PUSH_REMOTE: origin
-          INSTALL_DEPS: "1"
-          RUN_TESTS: "1"
-          BUILD_CHROME: "0"
-          PACKAGE_CHROME: "1"
-          ARTIFACT_DIR: ${{ github.workspace }}/artifacts
-          PUSH: "1"
-        run: ./scripts/update-self-hosted.sh
+      - name: Build, test, package, and push self-hosted
+        if: steps.check.outputs.rebuild == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
 
-      - name: Upload Chrome package
+          mkdir -p "$GITHUB_WORKSPACE/artifacts"
+
+          UPSTREAM_REMOTE=upstream \
+          UPSTREAM_BRANCH=main \
+          PUSH_REMOTE=origin \
+          TARGET_BRANCH=self-hosted \
+          INSTALL_DEPS=1 \
+          BUILD_CHROME=0 \
+          PACKAGE_CHROME=1 \
+          ARTIFACT_DIR="$GITHUB_WORKSPACE/artifacts" \
+          PUSH=1 \
+          ./scripts/update-self-hosted.sh
+
+      - name: Prepare release
+        if: steps.check.outputs.rebuild == 'true'
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch --no-tags origin self-hosted
+
+          self_hosted_sha="$(git rev-parse origin/self-hosted)"
+          self_hosted_short="${self_hosted_sha:0:10}"
+          upstream_sha="${{ steps.check.outputs.upstream_sha }}"
+          upstream_short="${upstream_sha:0:10}"
+          build_date="$(date -u +%Y.%m.%d)"
+
+          source_zip="$(
+            find "$GITHUB_WORKSPACE/artifacts" \
+              -maxdepth 1 \
+              -type f \
+              -name '*.zip' \
+              -print \
+              -quit
+          )"
+
+          if [[ -z "$source_zip" ]]; then
+            echo "No packaged Chrome ZIP was produced." >&2
+            exit 1
+          fi
+
+          asset="$GITHUB_WORKSPACE/artifacts/bitwarden-self-hosted-chrome-${build_date}-${self_hosted_short}.zip"
+
+          if [[ "$source_zip" != "$asset" ]]; then
+            mv "$source_zip" "$asset"
+          fi
+
+          checksum="${asset}.sha256"
+          (
+            cd "$(dirname "$asset")"
+            sha256sum "$(basename "$asset")" \
+              > "$(basename "$checksum")"
+          )
+
+          tag="self-hosted-${build_date}-${self_hosted_short}"
+          title="Self-hosted Chrome extension ${build_date}"
+
+          cat > "$GITHUB_WORKSPACE/release-notes.md" <<EOF
+          Automated self-hosted Chrome extension build.
+
+          Source:
+          - Official Bitwarden main: \`${upstream_sha}\`
+          - Self-hosted commit: \`${self_hosted_sha}\`
+          - Build infrastructure branch: \`automation\`
+          - Patched source branch: \`self-hosted\`
+
+          Included customizations:
+          - Collection search results in the extension popup
+          - MFA and multi-step command-autofill corrections
+
+          Installation:
+          1. Download the ZIP.
+          2. Extract it.
+          3. Open \`chrome://extensions\`.
+          4. Enable Developer mode.
+          5. Select Load unpacked.
+          6. Choose the extracted directory containing \`manifest.json\`.
+
+          Verify the download using the attached SHA-256 checksum.
+          EOF
+
+          {
+            echo "self_hosted_sha=$self_hosted_sha"
+            echo "self_hosted_short=$self_hosted_short"
+            echo "upstream_short=$upstream_short"
+            echo "tag=$tag"
+            echo "title=$title"
+            echo "asset=$asset"
+            echo "checksum=$checksum"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        if: steps.check.outputs.rebuild == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_TITLE: ${{ steps.release.outputs.title }}
+          RELEASE_TARGET: ${{ steps.release.outputs.self_hosted_sha }}
+          RELEASE_ASSET: ${{ steps.release.outputs.asset }}
+          RELEASE_CHECKSUM: ${{ steps.release.outputs.checksum }}
+        run: |
+          set -euo pipefail
+
+          if gh release view "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+
+            echo "Release $RELEASE_TAG already exists; replacing assets."
+
+            gh release upload "$RELEASE_TAG" \
+              "$RELEASE_ASSET#Chrome extension ZIP" \
+              "$RELEASE_CHECKSUM#SHA-256 checksum" \
+              --clobber \
+              --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$RELEASE_TAG" \
+              "$RELEASE_ASSET#Chrome extension ZIP" \
+              "$RELEASE_CHECKSUM#SHA-256 checksum" \
+              --target "$RELEASE_TARGET" \
+              --title "$RELEASE_TITLE" \
+              --notes-file "$GITHUB_WORKSPACE/release-notes.md" \
+              --repo "$GITHUB_REPOSITORY"
+          fi
+
+      - name: Retain workflow artifact
+        if: steps.check.outputs.rebuild == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: self-hosted-chrome-${{ github.run_number }}
-          path: artifacts/self-hosted-chrome-*.zip
+          name: ${{ steps.release.outputs.tag }}
+          path: |
+            ${{ steps.release.outputs.asset }}
+            ${{ steps.release.outputs.checksum }}
+          retention-days: 14
           if-no-files-found: error
-          retention-days: 30
+
+      - name: Report no update
+        if: steps.check.outputs.rebuild != 'true'
+        run: |
+          echo "No rebuild was required."
+          echo "The current self-hosted branch already uses the latest upstream main."
