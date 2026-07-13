@@ -79,7 +79,11 @@ import {
 } from "./new-item-dropdown/new-item-dropdown.component";
 import { VaultHeaderComponent } from "./vault-header/vault-header.component";
 
-import { AutofillVaultListItemsComponent, VaultListItemsContainerComponent } from ".";
+import {
+  AutofillVaultListItemsComponent,
+  VaultListItemsContainerComponent,
+  VaultSearchCollectionsComponent,
+} from ".";
 
 const VaultState = {
   Empty: 0,
@@ -105,6 +109,7 @@ type VaultState = UnionOfValues<typeof VaultState>;
     CommonModule,
     AutofillVaultListItemsComponent,
     VaultListItemsContainerComponent,
+    VaultSearchCollectionsComponent,
     ButtonModule,
     NewItemDropdownComponent,
     ScrollingModule,
@@ -166,6 +171,13 @@ export class VaultComponent implements OnInit, OnDestroy {
   protected favoriteCiphers$ = this.vaultPopupItemsService.favoriteCiphers$;
   protected allFilters$ = this.vaultPopupListFiltersService.allFilters$;
   protected cipherCount$ = this.vaultPopupItemsService.cipherCount$;
+
+  /**
+   * List of collections matching the current search text. Exposed from
+   * VaultPopupItemsService so the template can render matching collections
+   * above the standard cipher search results.
+   */
+  protected filteredCollections$ = this.vaultPopupItemsService.filteredCollections$;
 
   protected showPremiumSpotlight$ = combineLatest([
     this.activeUserId$.pipe(

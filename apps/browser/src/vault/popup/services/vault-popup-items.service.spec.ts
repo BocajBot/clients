@@ -413,6 +413,15 @@ describe("VaultPopupItemsService", () => {
         done();
       });
     });
+
+    it("should return false when ciphers are empty but collections match the search text", async () => {
+      cipherServiceMock.cipherListViews$.mockReturnValue(of([]));
+      searchService.isSearchable.mockResolvedValue(true);
+      searchService.searchCiphers.mockResolvedValue([]);
+      service.applyFilter("collection 1");
+
+      await expect(firstValueFrom(service.noFilteredResults$)).resolves.toBe(false);
+    });
   });
 
   describe("deletedCiphers$", () => {
@@ -503,6 +512,108 @@ describe("VaultPopupItemsService", () => {
     });
 
     service.applyFilter("test search");
+  });
+
+  describe("filteredCollections$", () => {
+    it("should return collections whose names match the search text (case-insensitive)", async () => {
+      searchService.isSearchable.mockResolvedValue(true);
+      service.applyFilter("collection 1");
+
+      const result = await firstValueFrom(service.filteredCollections$);
+
+      expect(result).toEqual([mockCollections[0]]);
+    });
+
+    it("should ignore diacritics when matching", async () => {
+      searchService.isSearchable.mockResolvedValue(true);
+      collectionService.decryptedCollections$.mockReturnValue(
+        new BehaviorSubject([{ id: "col3", name: "Café" } as CollectionView]),
+      );
+      service.applyFilter("cafe");
+
+      const result = await firstValueFrom(service.filteredCollections$);
+
+      expect(result.map((c) => c.id)).toEqual(["col3"]);
+    });
+
+    it("should return an empty array when no collection name matches", async () => {
+      searchService.isSearchable.mockResolvedValue(true);
+      service.applyFilter("no-such-collection");
+
+      const result = await firstValueFrom(service.filteredCollections$);
+
+      expect(result).toEqual([]);
+    });
+
+    it("should return an empty array when the search text is not searchable", async () => {
+      searchService.isSearchable.mockResolvedValue(false);
+      service.applyFilter("collection 1");
+
+      const result = await firstValueFrom(service.filteredCollections$);
+
+      expect(result).toEqual([]);
+    });
+
+    it("should return an empty array when a collection filter is already active", async () => {
+      searchService.isSearchable.mockResolvedValue(true);
+      (vaultPopupListFiltersServiceMock.filters$ as BehaviorSubject<any>).next({
+        organization: null,
+        collection: mockCollections[0],
+        cipherType: null,
+        folder: null,
+      });
+      service.applyFilter("collection 1");
+
+      const result = await firstValueFrom(service.filteredCollections$);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe("openCollection", () => {
+    let patchValue: jest.Mock;
+
+    beforeEach(() => {
+      patchValue = jest.fn();
+      (vaultPopupListFiltersServiceMock as any).filterForm = { patchValue };
+    });
+
+    it("should reset other filters, select the collection, and clear the search text", () => {
+      const collectionOption = { value: mockCollections[0], children: [] };
+      vaultPopupListFiltersServiceMock.collections$ = of([collectionOption]) as any;
+      const applyFilterSpy = jest.spyOn(service, "applyFilter");
+
+      service.openCollection(mockCollections[0]);
+
+      expect(patchValue).toHaveBeenCalledWith({
+        organization: null,
+        collection: mockCollections[0],
+        folder: null,
+        cipherType: null,
+      });
+      expect(applyFilterSpy).toHaveBeenCalledWith("");
+    });
+
+    it("should resolve a collection nested within a parent option", () => {
+      const child = { value: mockCollections[1], children: [] };
+      const parent = { value: mockCollections[0], children: [child] };
+      vaultPopupListFiltersServiceMock.collections$ = of([parent]) as any;
+
+      service.openCollection(mockCollections[1]);
+
+      expect(patchValue).toHaveBeenCalledWith(
+        expect.objectContaining({ collection: mockCollections[1] }),
+      );
+    });
+
+    it("should fall back to the provided collection when it is not among the options", () => {
+      vaultPopupListFiltersServiceMock.collections$ = of([]) as any;
+      const target = { id: "colX", name: "Collection X" } as CollectionView;
+
+      service.openCollection(target);
+
+      expect(patchValue).toHaveBeenCalledWith(expect.objectContaining({ collection: target }));
+    });
   });
 });
 
