@@ -1,8 +1,8 @@
 diff --git a/apps/browser/src/autofill/services/autofill.service.spec.ts b/apps/browser/src/autofill/services/autofill.service.spec.ts
-index be35dd7e6b724d5bab4f9ebfbf96225021f6abb1..02723d10f8753da6df1d0a763d00afa04659d05b 100644
+index f9ae10b85a0ebf895194aeec3b425e23717cfea3..e6c850fd69e1ddbfe456c3135a8e1ce1f3333c30 100644
 --- a/apps/browser/src/autofill/services/autofill.service.spec.ts
 +++ b/apps/browser/src/autofill/services/autofill.service.spec.ts
-@@ -1087,6 +1087,7 @@ describe("AutofillService", () => {
+@@ -1153,6 +1153,7 @@ describe("AutofillService", () => {
              fields: [
                createAutofillFieldMock({
                  opid: "username-field",
@@ -10,8 +10,8 @@ index be35dd7e6b724d5bab4f9ebfbf96225021f6abb1..02723d10f8753da6df1d0a763d00afa0
                  form: "validFormId",
                  elementNumber: 1,
                }),
-@@ -1270,6 +1271,116 @@ describe("AutofillService", () => {
-         expect(result).toBeNull();
+@@ -1342,6 +1343,124 @@ describe("AutofillService", () => {
+         expect(result).toEqual({ didAutofill: false });
        });
      });
 +
@@ -49,7 +49,9 @@ index be35dd7e6b724d5bab4f9ebfbf96225021f6abb1..02723d10f8753da6df1d0a763d00afa0
 +
 +      it("continues with the recently used cipher and does not advance the last used index", async () => {
 +        const totpCode = "123456";
-+        jest.spyOn(autofillService, "doAutoFill").mockResolvedValueOnce(totpCode);
++        jest
++          .spyOn(autofillService, "doAutoFill")
++          .mockResolvedValueOnce({ didAutofill: true, totp: totpCode });
 +        jest.spyOn(cipherService, "getLastUsedForUrl").mockResolvedValueOnce(recentlyUsedCipher);
 +        jest.spyOn(cipherService, "getNextCipherForUrl");
 +        jest.spyOn(cipherService, "updateLastUsedIndexForUrl");
@@ -62,14 +64,16 @@ index be35dd7e6b724d5bab4f9ebfbf96225021f6abb1..02723d10f8753da6df1d0a763d00afa0
 +        expect(autofillService.doAutoFill).toHaveBeenCalledWith(
 +          expect.objectContaining({ cipher: recentlyUsedCipher }),
 +        );
-+        expect(result).toBe(totpCode);
++        expect(result).toEqual({ didAutofill: true, totp: totpCode });
 +      });
 +
 +      it("advances to the next cipher when the recently used cipher is older than the continuation window", async () => {
 +        recentlyUsedCipher.localData.lastUsedDate =
 +          Date.now().valueOf() - (multiStepLoginContinuationWindowMs + 1);
 +        const totpCode = "123456";
-+        jest.spyOn(autofillService, "doAutoFill").mockResolvedValueOnce(totpCode);
++        jest
++          .spyOn(autofillService, "doAutoFill")
++          .mockResolvedValueOnce({ didAutofill: true, totp: totpCode });
 +        jest.spyOn(cipherService, "getLastUsedForUrl").mockResolvedValueOnce(recentlyUsedCipher);
 +        jest.spyOn(cipherService, "getNextCipherForUrl").mockResolvedValueOnce(nextCipher);
 +        jest.spyOn(cipherService, "updateLastUsedIndexForUrl");
@@ -81,12 +85,14 @@ index be35dd7e6b724d5bab4f9ebfbf96225021f6abb1..02723d10f8753da6df1d0a763d00afa0
 +        expect(autofillService.doAutoFill).toHaveBeenCalledWith(
 +          expect.objectContaining({ cipher: nextCipher }),
 +        );
-+        expect(result).toBe(totpCode);
++        expect(result).toEqual({ didAutofill: true, totp: totpCode });
 +      });
 +
 +      it("advances to the next cipher when there is no recently used cipher", async () => {
 +        const totpCode = "123456";
-+        jest.spyOn(autofillService, "doAutoFill").mockResolvedValueOnce(totpCode);
++        jest
++          .spyOn(autofillService, "doAutoFill")
++          .mockResolvedValueOnce({ didAutofill: true, totp: totpCode });
 +        jest.spyOn(cipherService, "getLastUsedForUrl").mockResolvedValueOnce(null);
 +        jest.spyOn(cipherService, "getNextCipherForUrl").mockResolvedValueOnce(nextCipher);
 +        jest.spyOn(cipherService, "updateLastUsedIndexForUrl");
@@ -98,7 +104,7 @@ index be35dd7e6b724d5bab4f9ebfbf96225021f6abb1..02723d10f8753da6df1d0a763d00afa0
 +        expect(autofillService.doAutoFill).toHaveBeenCalledWith(
 +          expect.objectContaining({ cipher: nextCipher }),
 +        );
-+        expect(result).toBe(totpCode);
++        expect(result).toEqual({ didAutofill: true, totp: totpCode });
 +      });
 +    });
 +
@@ -111,7 +117,9 @@ index be35dd7e6b724d5bab4f9ebfbf96225021f6abb1..02723d10f8753da6df1d0a763d00afa0
 +
 +      it("advances to the next cipher rather than continuing a multi-step login", async () => {
 +        const totpCode = "123456";
-+        jest.spyOn(autofillService, "doAutoFill").mockResolvedValueOnce(totpCode);
++        jest
++          .spyOn(autofillService, "doAutoFill")
++          .mockResolvedValueOnce({ didAutofill: true, totp: totpCode });
 +        jest.spyOn(cipherService, "getNextCipherForUrl").mockResolvedValueOnce(cipher);
 +        jest.spyOn(cipherService, "getLastUsedForUrl");
 +        jest.spyOn(cipherService, "updateLastUsedIndexForUrl");
@@ -121,13 +129,13 @@ index be35dd7e6b724d5bab4f9ebfbf96225021f6abb1..02723d10f8753da6df1d0a763d00afa0
 +        expect(cipherService.getNextCipherForUrl).toHaveBeenCalledWith(tab.url, mockUserId);
 +        expect(cipherService.getLastUsedForUrl).not.toHaveBeenCalled();
 +        expect(cipherService.updateLastUsedIndexForUrl).toHaveBeenCalledWith(tab.url);
-+        expect(result).toBe(totpCode);
++        expect(result).toEqual({ didAutofill: true, totp: totpCode });
 +      });
 +    });
    });
  
    describe("doAutoFillActiveTab", () => {
-@@ -1286,6 +1397,7 @@ describe("AutofillService", () => {
+@@ -1358,6 +1477,7 @@ describe("AutofillService", () => {
              fields: [
                createAutofillFieldMock({
                  opid: "username-field",
@@ -136,10 +144,10 @@ index be35dd7e6b724d5bab4f9ebfbf96225021f6abb1..02723d10f8753da6df1d0a763d00afa0
                  elementNumber: 1,
                }),
 diff --git a/apps/browser/src/autofill/services/autofill.service.ts b/apps/browser/src/autofill/services/autofill.service.ts
-index 2291cd93f33d1096356f9d1a6a3bae65f524ccfd..1aa1318b445ba0c2081b41bd06864468293a8926 100644
+index 636453073d3320cd92f5b96a2dd184a7e9fe8e96..47087903dc125e23a40b66379ce6ddc4c869d51b 100644
 --- a/apps/browser/src/autofill/services/autofill.service.ts
 +++ b/apps/browser/src/autofill/services/autofill.service.ts
-@@ -606,7 +606,7 @@ export default class AutofillService implements AutofillServiceInterface {
+@@ -626,7 +626,7 @@ export default class AutofillService implements AutofillServiceInterface {
          const lastUsedDate = lastUsedCipher?.localData?.lastUsedDate;
          const lastUsedRecently =
            typeof lastUsedDate === "number" &&

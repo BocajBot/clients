@@ -1,8 +1,8 @@
 diff --git a/apps/browser/src/autofill/services/autofill.service.spec.ts b/apps/browser/src/autofill/services/autofill.service.spec.ts
-index 082546843db6cfae755ced6a5e8c215449e35e7f..be35dd7e6b724d5bab4f9ebfbf96225021f6abb1 100644
+index f47404205515cd7969d7e21f1f42fdd6a4030a19..f9ae10b85a0ebf895194aeec3b425e23717cfea3 100644
 --- a/apps/browser/src/autofill/services/autofill.service.spec.ts
 +++ b/apps/browser/src/autofill/services/autofill.service.spec.ts
-@@ -2734,10 +2734,11 @@ describe("AutofillService", () => {
+@@ -2959,10 +2959,11 @@ describe("AutofillService", () => {
            expect(AutofillService.fillByOpid).toHaveBeenCalledWith(fillScript, totpField, totpCode);
          });
  
@@ -17,7 +17,7 @@ index 082546843db6cfae755ced6a5e8c215449e35e7f..be35dd7e6b724d5bab4f9ebfbf962250
            const ambiguousField = createAutofillFieldMock({
              opid: "ambiguous-totp",
              type: "text",
-@@ -2758,6 +2759,11 @@ describe("AutofillService", () => {
+@@ -2983,6 +2984,11 @@ describe("AutofillService", () => {
  
            expect(AutofillService.fillByOpid).toHaveBeenCalledTimes(1);
            expect(AutofillService.fillByOpid).toHaveBeenCalledWith(
@@ -30,11 +30,11 @@ index 082546843db6cfae755ced6a5e8c215449e35e7f..be35dd7e6b724d5bab4f9ebfbf962250
              ambiguousField,
              options.cipher.login.username,
 diff --git a/apps/browser/src/autofill/services/autofill.service.ts b/apps/browser/src/autofill/services/autofill.service.ts
-index 74b4cb92b3f01ca9140c199b9f154670d27ca413..2291cd93f33d1096356f9d1a6a3bae65f524ccfd 100644
+index 3d939ddc7843f7e3b783c91251327f7a3ea18bdf..636453073d3320cd92f5b96a2dd184a7e9fe8e96 100644
 --- a/apps/browser/src/autofill/services/autofill.service.ts
 +++ b/apps/browser/src/autofill/services/autofill.service.ts
-@@ -574,8 +574,49 @@ export default class AutofillService implements AutofillServiceInterface {
-       return null;
+@@ -594,8 +594,49 @@ export default class AutofillService implements AutofillServiceInterface {
+       return { didAutofill: false };
      }
      const tabUrl = tab.url;
 +    let continuingMultiStepLogin = false;
@@ -84,7 +84,7 @@ index 74b4cb92b3f01ca9140c199b9f154670d27ca413..2291cd93f33d1096356f9d1a6a3bae65
      } else {
        const lastLaunchedCipher = await this.cipherService.getLastLaunchedForUrl(
          tabUrl,
-@@ -599,7 +640,7 @@ export default class AutofillService implements AutofillServiceInterface {
+@@ -619,7 +660,7 @@ export default class AutofillService implements AutofillServiceInterface {
      }
  
      if (await this.isPasswordRepromptRequired(cipher, tab)) {
@@ -93,34 +93,33 @@ index 74b4cb92b3f01ca9140c199b9f154670d27ca413..2291cd93f33d1096356f9d1a6a3bae65
          this.cipherService.updateLastUsedIndexForUrl(tabUrl);
        }
  
-@@ -620,7 +661,7 @@ export default class AutofillService implements AutofillServiceInterface {
+@@ -640,7 +681,7 @@ export default class AutofillService implements AutofillServiceInterface {
      });
  
      // Update last used index as autofill has succeeded
--    if (fromCommand) {
-+    if (fromCommand && !continuingMultiStepLogin) {
+-    if (fromCommand && result.didAutofill) {
++    if (fromCommand && result.didAutofill && !continuingMultiStepLogin) {
        this.cipherService.updateLastUsedIndexForUrl(tabUrl);
      }
  
-@@ -1045,6 +1086,8 @@ export default class AutofillService implements AutofillServiceInterface {
-     let username: AutofillField | null = null;
+@@ -1116,6 +1157,7 @@ export default class AutofillService implements AutofillServiceInterface {
      let totp: AutofillField | null = null;
      const login = options.cipher.login;
-+    const hasLoginTotp =
-+      options.allowTotpAutofill && typeof login.totp === "string" && login.totp.length > 0;
+     const totpToFill = options.allowTotpAutofill && options.canAccessTotp ? login?.totp : undefined;
++    const hasLoginTotp = typeof totpToFill === "string" && totpToFill.length > 0;
      const loginURIs = login?.uris ?? [];
      fillScript.savedUrls = loginURIs.reduce<string[]>((acc, savedURI) => {
        if (savedURI.match != UriMatchStrategy.Never && savedURI.uri != null) {
-@@ -1168,7 +1211,7 @@ export default class AutofillService implements AutofillServiceInterface {
+@@ -1239,7 +1281,7 @@ export default class AutofillService implements AutofillServiceInterface {
          }
        }
  
--      if (options.allowTotpAutofill && login.totp) {
+-      if (totpToFill) {
 +      if (hasLoginTotp) {
          totp =
            isFocusedTotpField && passwordMatchesFocused(passField)
              ? focusedField
-@@ -1244,7 +1287,7 @@ export default class AutofillService implements AutofillServiceInterface {
+@@ -1315,7 +1357,7 @@ export default class AutofillService implements AutofillServiceInterface {
          }
  
          const isTotpCandidate =
@@ -129,7 +128,7 @@ index 74b4cb92b3f01ca9140c199b9f154670d27ca413..2291cd93f33d1096356f9d1a6a3bae65
            ["number", "tel", "text"].some((t) => t === field.type) &&
            !fieldContainsKeyword(field, [...AutoFillConstants.RecoveryCodeFieldNames]);
  
-@@ -1262,17 +1305,20 @@ export default class AutofillService implements AutofillServiceInterface {
+@@ -1333,17 +1375,20 @@ export default class AutofillService implements AutofillServiceInterface {
            fieldContainsKeyword(field, AutoFillConstants.UsernameFieldNames) &&
            !isNonLoginUsernameField(field, pageDetails);
  
