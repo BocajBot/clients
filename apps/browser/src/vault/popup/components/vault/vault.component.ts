@@ -93,7 +93,11 @@ import { VaultHeaderComponent } from "./vault-header/vault-header.component";
 import { VaultPopupListTableComponent } from "./vault-popup-list-table/vault-popup-list-table.component";
 import { VaultSwitcherComponent } from "./vault-switcher/vault-switcher.component";
 
-import { AutofillVaultListItemsComponent, VaultListItemsContainerComponent } from ".";
+import {
+  AutofillVaultListItemsComponent,
+  VaultListItemsContainerComponent,
+  VaultSearchCollectionsComponent,
+} from ".";
 
 const VaultState = {
   Empty: 0,
@@ -120,6 +124,7 @@ type VaultState = UnionOfValues<typeof VaultState>;
     CommonModule,
     AutofillVaultListItemsComponent,
     VaultListItemsContainerComponent,
+    VaultSearchCollectionsComponent,
     ButtonModule,
     NewItemDropdownComponent,
     AppVaultFabComponent,
@@ -190,6 +195,13 @@ export class VaultComponent implements OnInit, OnDestroy {
    * The header's item count, off the list table's rows — `cipherCount$` counts the whole vault.
    */
   protected cipherCount$ = this.vaultPopupListTableService.itemCount$;
+
+  /**
+   * List of collections matching the current search text. Exposed from
+   * VaultPopupItemsService so the template can render matching collections
+   * above the standard cipher search results.
+   */
+  protected filteredCollections$ = this.vaultPopupItemsService.filteredCollections$;
 
   protected showPremiumSpotlight$ = combineLatest([
     this.activeUserId$.pipe(
