@@ -654,7 +654,7 @@ export default class AutofillService implements AutofillServiceInterface {
         const lastUsedDate = lastUsedCipher?.localData?.lastUsedDate;
         const lastUsedRecently =
           typeof lastUsedDate === "number" &&
-          Date.now().valueOf() - lastUsedDate < multiStepLoginContinuationWindowMs;
+          Date.now() - lastUsedDate < multiStepLoginContinuationWindowMs;
 
         if (lastUsedCipher && lastUsedRecently) {
           cipher = lastUsedCipher;
