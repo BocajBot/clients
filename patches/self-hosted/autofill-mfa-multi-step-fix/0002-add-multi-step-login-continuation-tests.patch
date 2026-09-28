@@ -1,8 +1,8 @@
 diff --git a/apps/browser/src/autofill/services/autofill.service.spec.ts b/apps/browser/src/autofill/services/autofill.service.spec.ts
-index f9ae10b85a0ebf895194aeec3b425e23717cfea3..e6c850fd69e1ddbfe456c3135a8e1ce1f3333c30 100644
+index b5be10246fc173073c6eb10b696607167349d165..019791361ee743fbb1d93820fb9fd99e0432ee39 100644
 --- a/apps/browser/src/autofill/services/autofill.service.spec.ts
 +++ b/apps/browser/src/autofill/services/autofill.service.spec.ts
-@@ -1153,6 +1153,7 @@ describe("AutofillService", () => {
+@@ -1229,6 +1229,7 @@ describe("AutofillService", () => {
              fields: [
                createAutofillFieldMock({
                  opid: "username-field",
@@ -10,7 +10,7 @@ index f9ae10b85a0ebf895194aeec3b425e23717cfea3..e6c850fd69e1ddbfe456c3135a8e1ce1
                  form: "validFormId",
                  elementNumber: 1,
                }),
-@@ -1342,6 +1343,124 @@ describe("AutofillService", () => {
+@@ -1418,6 +1419,124 @@ describe("AutofillService", () => {
          expect(result).toEqual({ didAutofill: false });
        });
      });
@@ -135,7 +135,7 @@ index f9ae10b85a0ebf895194aeec3b425e23717cfea3..e6c850fd69e1ddbfe456c3135a8e1ce1
    });
  
    describe("doAutoFillActiveTab", () => {
-@@ -1358,6 +1477,7 @@ describe("AutofillService", () => {
+@@ -1434,6 +1553,7 @@ describe("AutofillService", () => {
              fields: [
                createAutofillFieldMock({
                  opid: "username-field",
@@ -144,10 +144,10 @@ index f9ae10b85a0ebf895194aeec3b425e23717cfea3..e6c850fd69e1ddbfe456c3135a8e1ce1
                  elementNumber: 1,
                }),
 diff --git a/apps/browser/src/autofill/services/autofill.service.ts b/apps/browser/src/autofill/services/autofill.service.ts
-index 636453073d3320cd92f5b96a2dd184a7e9fe8e96..47087903dc125e23a40b66379ce6ddc4c869d51b 100644
+index e486ae409ca2ddcd9e17e76744b66bc8185b0547..ca31f415305b7648309ebc175868334c4112cf85 100644
 --- a/apps/browser/src/autofill/services/autofill.service.ts
 +++ b/apps/browser/src/autofill/services/autofill.service.ts
-@@ -626,7 +626,7 @@ export default class AutofillService implements AutofillServiceInterface {
+@@ -654,7 +654,7 @@ export default class AutofillService implements AutofillServiceInterface {
          const lastUsedDate = lastUsedCipher?.localData?.lastUsedDate;
          const lastUsedRecently =
            typeof lastUsedDate === "number" &&

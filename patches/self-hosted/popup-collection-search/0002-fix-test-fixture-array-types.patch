@@ -1,7 +1,8 @@
 diff --git a/apps/browser/src/vault/popup/services/vault-popup-items.service.spec.ts b/apps/browser/src/vault/popup/services/vault-popup-items.service.spec.ts
+index ad75f2f173effb75102464b23eb6e82b2853e67b..9f69db99a05981df34023a3b7896bad1f396e77d 100644
 --- a/apps/browser/src/vault/popup/services/vault-popup-items.service.spec.ts
 +++ b/apps/browser/src/vault/popup/services/vault-popup-items.service.spec.ts
-@@ -579,7 +579,7 @@ describe("VaultPopupItemsService", () => {
+@@ -689,7 +689,7 @@ describe("VaultPopupItemsService", () => {
      });
  
      it("should reset other filters, select the collection, and clear the search text", () => {
@@ -10,7 +11,7 @@ diff --git a/apps/browser/src/vault/popup/services/vault-popup-items.service.spe
        vaultPopupListFiltersServiceMock.collections$ = of([collectionOption]) as any;
        const applyFilterSpy = jest.spyOn(service, "applyFilter");
  
-@@ -595,7 +595,7 @@ describe("VaultPopupItemsService", () => {
+@@ -705,7 +705,7 @@ describe("VaultPopupItemsService", () => {
      });
  
      it("should resolve a collection nested within a parent option", () => {
