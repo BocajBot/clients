@@ -35,6 +35,10 @@ jobs:
           ref: automation
           fetch-depth: 0
           persist-credentials: true
+          # self-hosted carries upstream's .github/workflows changes; GITHUB_TOKEN may not
+          # push those ("refusing to allow a GitHub App to create or update workflow").
+          # SELF_HOSTED_PUSH_TOKEN: fine-grained PAT on this repo, Contents + Workflows write.
+          token: ${{ secrets.SELF_HOSTED_PUSH_TOKEN || github.token }}
 
       - name: Configure Git repositories
         shell: bash
