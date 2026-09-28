@@ -32,7 +32,6 @@ import {
 } from "@bitwarden/common/platform/abstractions/environment.service";
 import { PlatformUtilsService } from "@bitwarden/common/platform/abstractions/platform-utils.service";
 import { StateService } from "@bitwarden/common/platform/abstractions/state.service";
-import { SymmetricCryptoKey } from "@bitwarden/common/platform/models/domain/symmetric-crypto-key";
 import { CollectionId, OrganizationId } from "@bitwarden/common/types/guid";
 import { CipherService } from "@bitwarden/common/vault/abstractions/cipher.service";
 import { PremiumUpgradePromptService } from "@bitwarden/common/vault/abstractions/premium-upgrade-prompt.service";
@@ -46,7 +45,10 @@ import { CipherAuthorizationService } from "@bitwarden/common/vault/services/cip
 import { RestrictedItemTypesService } from "@bitwarden/common/vault/services/restricted-item-types.service";
 import { CipherViewLike } from "@bitwarden/common/vault/utils/cipher-view-like-utils";
 import { LayoutComponent, StorybookGlobalStateProvider, ToastService } from "@bitwarden/components";
+// eslint-disable-next-line no-restricted-imports
+import { SymmetricCryptoKey } from "@bitwarden/legacy-crypto";
 import { GlobalStateProvider } from "@bitwarden/state";
+import { ShareLinkService } from "@bitwarden/tools-share";
 import { RoutedVaultFilterService, PasswordRepromptService } from "@bitwarden/vault";
 
 import { GroupView } from "../../../admin-console/organizations/core";
@@ -201,6 +203,7 @@ export default {
           provide: CipherService,
           useValue: () => {},
         },
+        { provide: ShareLinkService, useValue: { cipherCanBeShared$: () => of(false) } },
       ],
     }),
     applicationConfig({
@@ -264,7 +267,6 @@ export const Individual: Story = {
     showOwner: true,
     showCollections: false,
     showGroups: false,
-    showPremiumFeatures: true,
     showBulkMove: true,
     showBulkTrashOptions: false,
     useEvents: false,
@@ -279,7 +281,6 @@ export const IndividualDisabled: Story = {
     showOwner: true,
     showCollections: false,
     showGroups: false,
-    showPremiumFeatures: true,
     showBulkMove: true,
     showBulkTrashOptions: false,
     useEvents: false,
@@ -293,7 +294,6 @@ export const IndividualTrash: Story = {
     showOwner: true,
     showCollections: false,
     showGroups: false,
-    showPremiumFeatures: true,
     showBulkMove: false,
     showBulkTrashOptions: true,
     useEvents: false,
@@ -307,7 +307,6 @@ export const IndividualTopLevelCollection: Story = {
     showOwner: true,
     showCollections: false,
     showGroups: false,
-    showPremiumFeatures: true,
     showBulkMove: false,
     showBulkTrashOptions: false,
     useEvents: false,
@@ -321,7 +320,6 @@ export const IndividualSecondLevelCollection: Story = {
     showOwner: true,
     showCollections: false,
     showGroups: false,
-    showPremiumFeatures: true,
     showBulkMove: true,
     showBulkTrashOptions: false,
     useEvents: false,
@@ -335,7 +333,6 @@ export const OrganizationVault: Story = {
     showOwner: false,
     showCollections: true,
     showGroups: false,
-    showPremiumFeatures: true,
     showBulkMove: false,
     showBulkTrashOptions: false,
     useEvents: true,
@@ -349,7 +346,6 @@ export const OrganizationTrash: Story = {
     showOwner: false,
     showCollections: true,
     showGroups: false,
-    showPremiumFeatures: true,
     showBulkMove: false,
     showBulkTrashOptions: true,
     useEvents: true,
@@ -368,7 +364,6 @@ export const OrganizationTopLevelCollection: Story = {
     showOwner: false,
     showCollections: false,
     showGroups: true,
-    showPremiumFeatures: true,
     showBulkMove: false,
     showBulkTrashOptions: false,
     useEvents: true,
@@ -382,7 +377,6 @@ export const OrganizationSecondLevelCollection: Story = {
     showOwner: false,
     showCollections: false,
     showGroups: true,
-    showPremiumFeatures: true,
     showBulkMove: false,
     showBulkTrashOptions: false,
     useEvents: true,
@@ -446,11 +440,11 @@ function createCollectionView(i: number): CollectionAdminView {
 
 function createGroupView(i: number): GroupView {
   const organization = organizations[i % organizations.length];
-  const view = new GroupView();
-  view.id = `group-${i}`;
-  view.name = `Group ${i}`;
-  view.organizationId = organization.id;
-  return view;
+  return new GroupView({
+    id: `group-${i}`,
+    name: `Group ${i}`,
+    organizationId: organization.id,
+  });
 }
 
 function createOrganization(i: number): Organization {

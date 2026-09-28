@@ -1,16 +1,14 @@
-import { firstValueFrom, map, Observable, of, switchMap } from "rxjs";
+import { concatMap, firstValueFrom, map, Observable, of, switchMap } from "rxjs";
 
 import { ErrorResponse } from "@bitwarden/common/models/response/error.response";
 import { EnvironmentService } from "@bitwarden/common/platform/abstractions/environment.service";
 import { asUuid, SdkService } from "@bitwarden/common/platform/abstractions/sdk/sdk.service";
 import { OrganizationId, UserId } from "@bitwarden/common/types/guid";
-import { Invite, OrganizationId as SdkOrganizationId } from "@bitwarden/sdk-internal";
+import { OrganizationId as SdkOrganizationId } from "@bitwarden/sdk-internal";
 import { StateProvider } from "@bitwarden/state";
 
 import { OrganizationInviteLinkApiService } from "../abstractions/organization-invite-link-api.service";
 import { OrganizationInviteLinkService } from "../abstractions/organization-invite-link.service";
-import { OrganizationInviteLinkCreateRequest } from "../models/requests/organization-invite-link-create.request";
-import { OrganizationInviteLinkRefreshRequest } from "../models/requests/organization-invite-link-refresh.request";
 import { OrganizationInviteLinkUpdateRequest } from "../models/requests/organization-invite-link-update.request";
 import {
   OrganizationInviteLink,
@@ -42,14 +40,26 @@ export class DefaultOrganizationInviteLinkService implements OrganizationInviteL
     allowedDomains: string[],
     supportsConfirmation: boolean,
   ): Promise<void> {
-    const invite = await firstValueFrom(this.makeInvite(userId, orgId));
-    const request = new OrganizationInviteLinkCreateRequest({
-      allowedDomains,
-      invite,
-      supportsConfirmation,
-    });
-    const response = await this.apiService.create(orgId, request);
-    await this.upsert(userId, new OrganizationInviteLink(response));
+    if (allowedDomains.length === 0) {
+      throw new Error("At least one allowed domain is required.");
+    }
+
+    return firstValueFrom(
+      this.sdkService.userClient$(userId).pipe(
+        concatMap(async (sdk) => {
+          using ref = sdk.take();
+          const inviteLink = ref.value
+            .invite_link()
+            .create_invite_link(
+              asUuid<SdkOrganizationId>(orgId),
+              allowedDomains,
+              supportsConfirmation,
+            );
+          return await inviteLink;
+        }),
+        concatMap((inviteLink) => this.upsert(userId, OrganizationInviteLink.fromSdk(inviteLink))),
+      ),
+    );
   }
 
   async updateAllowedDomains(
@@ -67,18 +77,51 @@ export class DefaultOrganizationInviteLinkService implements OrganizationInviteL
     await this.upsert(userId, new OrganizationInviteLink(response));
   }
 
+  async setInviteConfirmation(
+    userId: UserId,
+    orgId: OrganizationId,
+    supportsConfirmation: boolean,
+  ): Promise<void> {
+    const current = await firstValueFrom(this.inviteLink$(userId, orgId));
+    if (current == null) {
+      throw new Error("No invite link exists for this organization.");
+    }
+
+    return firstValueFrom(
+      this.sdkService.userClient$(userId).pipe(
+        concatMap(async (sdk) => {
+          using ref = sdk.take();
+          const inviteLink = ref.value
+            .invite_link()
+            .set_invite_confirmation(
+              asUuid<SdkOrganizationId>(orgId),
+              current.invite,
+              supportsConfirmation,
+            );
+          return await inviteLink;
+        }),
+        concatMap((inviteLink) => this.upsert(userId, OrganizationInviteLink.fromSdk(inviteLink))),
+      ),
+    );
+  }
+
   async refreshInviteLink(
     userId: UserId,
     orgId: OrganizationId,
     supportsConfirmation: boolean,
   ): Promise<void> {
-    const invite = await firstValueFrom(this.makeInvite(userId, orgId));
-    const request = new OrganizationInviteLinkRefreshRequest({
-      invite,
-      supportsConfirmation,
-    });
-    const response = await this.apiService.refresh(orgId, request);
-    await this.upsert(userId, new OrganizationInviteLink(response));
+    return firstValueFrom(
+      this.sdkService.userClient$(userId).pipe(
+        concatMap(async (sdk) => {
+          using ref = sdk.take();
+          const inviteLink = ref.value
+            .invite_link()
+            .refresh_invite_link(asUuid<SdkOrganizationId>(orgId), supportsConfirmation);
+          return await inviteLink;
+        }),
+        concatMap((inviteLink) => this.upsert(userId, OrganizationInviteLink.fromSdk(inviteLink))),
+      ),
+    );
   }
 
   reconstructUrl(
@@ -91,9 +134,9 @@ export class DefaultOrganizationInviteLinkService implements OrganizationInviteL
         using ref = sdk.take();
         return ref.value
           .invite_link()
-          .get_invite_key(asUuid<SdkOrganizationId>(orgId), inviteLink.invite);
+          .get_invite_secret(asUuid<SdkOrganizationId>(orgId), inviteLink.invite);
       }),
-      switchMap((inviteKey) => this.buildInviteUrl(inviteLink.code, inviteKey)),
+      switchMap((inviteKey) => this.buildInviteUrl(orgId, inviteLink.code, inviteKey)),
     );
   }
 
@@ -111,9 +154,9 @@ export class DefaultOrganizationInviteLinkService implements OrganizationInviteL
       .update((state) => (state == null ? state : { ...state, [orgId]: undefined }));
   }
 
-  private buildInviteUrl(code: string, keyB64: string): Observable<string> {
+  private buildInviteUrl(orgId: string, code: string, keyB64: string): Observable<string> {
     return this.environmentService.environment$.pipe(
-      map((env) => `${env.getWebVaultUrl()}/#/join/${code}?key=${keyB64}`),
+      map((env) => `${env.getWebVaultUrl()}/#/join/${orgId}/${code}?key=${keyB64}`),
     );
   }
 
@@ -134,15 +177,5 @@ export class DefaultOrganizationInviteLinkService implements OrganizationInviteL
     const inviteLink = new OrganizationInviteLink(response);
     await this.upsert(userId, inviteLink);
     return inviteLink;
-  }
-
-  private makeInvite(userId: UserId, orgId: OrganizationId): Observable<Invite> {
-    return this.sdkService.userClient$(userId).pipe(
-      map((sdk) => {
-        using ref = sdk.take();
-        const bundle = ref.value.invite_link().make_invite(asUuid<SdkOrganizationId>(orgId));
-        return bundle.invite;
-      }),
-    );
   }
 }

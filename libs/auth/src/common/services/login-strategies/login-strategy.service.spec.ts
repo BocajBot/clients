@@ -18,7 +18,6 @@ import {
 import { TwoFactorService } from "@bitwarden/common/auth/two-factor";
 import { BillingAccountProfileStateService } from "@bitwarden/common/billing/abstractions/account/billing-account-profile-state.service";
 import { DefaultAccountCryptographicStateService } from "@bitwarden/common/key-management/account-cryptography/default-account-cryptographic-state.service";
-import { EncryptService } from "@bitwarden/common/key-management/crypto/abstractions/encrypt.service";
 import { DeviceTrustServiceAbstraction } from "@bitwarden/common/key-management/device-trust/abstractions/device-trust.service.abstraction";
 import { KeyConnectorService } from "@bitwarden/common/key-management/key-connector/abstractions/key-connector.service";
 import { FakeMasterPasswordService } from "@bitwarden/common/key-management/master-password/services/fake-master-password.service";
@@ -33,7 +32,6 @@ import { I18nService } from "@bitwarden/common/platform/abstractions/i18n.servic
 import { LogService } from "@bitwarden/common/platform/abstractions/log.service";
 import { MessagingService } from "@bitwarden/common/platform/abstractions/messaging.service";
 import { PlatformUtilsService } from "@bitwarden/common/platform/abstractions/platform-utils.service";
-import { StateService } from "@bitwarden/common/platform/abstractions/state.service";
 import {
   FakeAccountService,
   FakeGlobalStateProvider,
@@ -41,13 +39,15 @@ import {
 } from "@bitwarden/common/spec";
 import { PasswordStrengthServiceAbstraction } from "@bitwarden/common/tools/password-strength";
 import { UserId } from "@bitwarden/common/types/guid";
+import { KdfConfigService, KeyService } from "@bitwarden/key-management";
+// eslint-disable-next-line no-restricted-imports
 import {
   Argon2KdfConfig,
-  KdfConfigService,
+  EncryptService,
   KdfType,
-  KeyService,
+  LegacyCompatKeyService,
   PBKDF2KdfConfig,
-} from "@bitwarden/key-management";
+} from "@bitwarden/legacy-crypto";
 import { UnlockService } from "@bitwarden/unlock";
 
 import {
@@ -62,7 +62,7 @@ import { UserDecryptionOptionsService } from "../user-decryption-options/user-de
 import { LoginStrategyService } from "./login-strategy.service";
 import { CacheData } from "./login-strategy.state";
 
-const argon2PreloginData = new PasswordPreloginData(new Argon2KdfConfig(2, 16, 1));
+const argon2PreloginData = new PasswordPreloginData(new Argon2KdfConfig(2, 16, 1), "prelogin-salt");
 
 describe("LoginStrategyService", () => {
   let sut: LoginStrategyService;
@@ -70,6 +70,7 @@ describe("LoginStrategyService", () => {
   let accountService: FakeAccountService;
   let masterPasswordService: FakeMasterPasswordService;
   let keyService: MockProxy<KeyService>;
+  let legacyCompatKeyService: MockProxy<LegacyCompatKeyService>;
   let apiService: MockProxy<ApiService>;
   let tokenService: MockProxy<TokenService>;
   let appIdService: MockProxy<AppIdService>;
@@ -79,7 +80,6 @@ describe("LoginStrategyService", () => {
   let keyConnectorService: MockProxy<KeyConnectorService>;
   let unlockService: MockProxy<UnlockService>;
   let environmentService: MockProxy<EnvironmentService>;
-  let stateService: MockProxy<StateService>;
   let twoFactorService: MockProxy<TwoFactorService>;
   let i18nService: MockProxy<I18nService>;
   let encryptService: MockProxy<EncryptService>;
@@ -106,6 +106,7 @@ describe("LoginStrategyService", () => {
     masterPasswordService = new FakeMasterPasswordService();
     unlockService = mock<UnlockService>();
     keyService = mock<KeyService>();
+    legacyCompatKeyService = mock<LegacyCompatKeyService>();
     apiService = mock<ApiService>();
     tokenService = mock<TokenService>();
     appIdService = mock<AppIdService>();
@@ -115,7 +116,6 @@ describe("LoginStrategyService", () => {
     keyConnectorService = mock<KeyConnectorService>();
     unlockService = mock<UnlockService>();
     environmentService = mock<EnvironmentService>();
-    stateService = mock<StateService>();
     twoFactorService = mock<TwoFactorService>();
     i18nService = mock<I18nService>();
     encryptService = mock<EncryptService>();
@@ -158,9 +158,9 @@ describe("LoginStrategyService", () => {
     });
 
     passwordPreloginService.getPreloginData$.mockReturnValue(
-      of(new PasswordPreloginData(PBKDF2KdfConfig.createDefault())),
+      of(new PasswordPreloginData(PBKDF2KdfConfig.createDefault(), "prelogin-salt")),
     );
-    keyService.makeMasterKey.mockResolvedValue({} as any);
+    legacyCompatKeyService.makeMasterKey.mockResolvedValue({} as any);
 
     sut = new LoginStrategyService(
       accountService,
@@ -174,7 +174,6 @@ describe("LoginStrategyService", () => {
       logService,
       keyConnectorService,
       environmentService,
-      stateService,
       twoFactorService,
       i18nService,
       encryptService,
@@ -193,6 +192,7 @@ describe("LoginStrategyService", () => {
       unlockService,
       loginStrategyCacheService,
       loginStrategySessionTimeoutService,
+      legacyCompatKeyService,
     );
 
     const mockVaultTimeoutAction = VaultTimeoutAction.Lock;
@@ -342,7 +342,6 @@ describe("LoginStrategyService", () => {
       logService,
       keyConnectorService,
       environmentService,
-      stateService,
       twoFactorService,
       i18nService,
       encryptService,
@@ -361,6 +360,7 @@ describe("LoginStrategyService", () => {
       unlockService,
       loginStrategyCacheService,
       loginStrategySessionTimeoutService,
+      legacyCompatKeyService,
     );
 
     const twoFactorToken = new TokenTwoFactorRequest(

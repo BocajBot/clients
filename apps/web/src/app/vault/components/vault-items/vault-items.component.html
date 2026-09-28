@@ -40,7 +40,9 @@
           </th>
         }
         @if (showCollections) {
-          <th bitCell class="tw-w-2/5 tw-hidden xl:tw-table-cell">{{ "collections" | i18n }}</th>
+          <th bitCell class="tw-w-2/5 tw-hidden xl:tw-table-cell">
+            {{ "collections" | vfo1I18n: "sharedFolders" }}
+          </th>
         }
         @if (showGroups) {
           <th
@@ -65,13 +67,8 @@
         }
         <th
           bitCell
-          [ngClass]="
-            ((showCopyAndLaunchActions$ | async)
-              ? 'tw-w-28'
-              : batchBarService?.enabled()
-                ? 'tw-w-24'
-                : 'tw-w-12') + ' tw-text-right'
-          "
+          class="tw-text-right"
+          [ngClass]="optionsColumnWidthClass((showQuickCopyActions$ | async) ?? false)"
         >
           @if (!batchBarService?.enabled()) {
             @let menuDisabled = disableMenu$ | async;
@@ -88,7 +85,7 @@
               @if (bulkMoveAllowed) {
                 <button type="button" bitMenuItem (click)="bulkMoveToFolder()">
                   <i class="bwi bwi-fw bwi-folder" aria-hidden="true"></i>
-                  {{ "addToFolder" | i18n }}
+                  {{ "addToFolder" | vfo1I18n: "addToMyFolder" }}
                 </button>
               }
               @if (showAdminActions && showBulkEditCollectionAccess) {
@@ -101,8 +98,8 @@
                 (showAdminActions || showAssignToCollections()) && bulkAssignToCollectionsAllowed
               ) {
                 <button type="button" bitMenuItem (click)="assignToCollections()">
-                  <i class="bwi bwi-fw bwi-collection-shared" aria-hidden="true"></i>
-                  {{ "assignToCollections" | i18n }}
+                  <bit-icon fixedWidth [name]="'bwi-collection-shared' | vfo1Icon" slot="start" />
+                  {{ "assignToCollections" | vfo1I18n: "addToSharedFolder" }}
                 </button>
               }
 
@@ -176,7 +173,6 @@
             [showOwner]="showOwner"
             [showCollections]="showCollections"
             [showGroups]="showGroups"
-            [showPremiumFeatures]="showPremiumFeatures"
             [useEvents]="useEvents"
             [viewingOrgVault]="viewingOrgVault"
             [cloneable]="canClone$(item) | async"

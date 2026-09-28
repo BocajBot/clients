@@ -7,13 +7,18 @@ import { LogService } from "@bitwarden/common/platform/abstractions/log.service"
 import { SyncService } from "@bitwarden/common/vault/abstractions/sync/sync.service.abstraction";
 import { CipherType } from "@bitwarden/common/vault/enums";
 import {
+  CredentialKind,
   Importer,
+  ImportOption,
+  ImportRecordError,
+  ImportRecordErrorReason,
   ImportResult,
   ImportServiceAbstraction,
   SdkImportSummary,
 } from "@bitwarden/importer-core";
 
 import { Response } from "../models/response";
+import { MessageResponse } from "../models/response/message.response";
 import { CliUtils } from "../utils";
 
 import { ImportCommand } from "./import.command";
@@ -44,6 +49,18 @@ describe("ImportCommand", () => {
     collections: 0,
   });
 
+  const kdbxOption = (): ImportOption => ({
+    id: "keepasskdbx",
+    name: "KeePass (kdbx)",
+    featuredImporter: false,
+    isBrowser: false,
+    acceptedFileTypes: ["kdbx"],
+    pasteFormats: [],
+    hasDirectImporter: false,
+    loaders: [],
+    sdk: { fileTypes: ["kdbx"], credentialKind: CredentialKind.passwordWithKeyFile },
+  });
+
   beforeEach(() => {
     importService = mock<ImportServiceAbstraction>();
     organizationService = mock<OrganizationService>();
@@ -61,8 +78,9 @@ describe("ImportCommand", () => {
     );
 
     // KDBX is an SDK importer requiring a password + optional key file.
-    importService.isSdkImporter.mockImplementation((format) => format === "keepasskdbx");
-    importService.credentialKindFor.mockReturnValue("passwordWithKeyFile");
+    importService.getImportOption.mockImplementation((id) =>
+      id === "keepasskdbx" ? kdbxOption() : undefined,
+    );
     importService.sdkErrorMessageKey.mockReturnValue(undefined);
     importService.importWithSdk.mockResolvedValue(summary());
 
@@ -168,5 +186,23 @@ describe("ImportCommand", () => {
 
     expect(readFileSpy).toHaveBeenCalledWith("data.csv");
     expect(importService.importWithSdk).not.toHaveBeenCalled();
+  });
+
+  it("reports skipped items on a partial success and still succeeds", async () => {
+    jest.spyOn(CliUtils, "readFile").mockResolvedValue("name,login\n");
+    importService.getImporter.mockReturnValue(importerStub());
+    const result = successResult();
+    result.errors = [
+      new ImportRecordError("ssh-key-uuid", ImportRecordErrorReason.SshKeyParseFailed),
+    ];
+    importService.import.mockResolvedValue(result);
+
+    const response = await command.run("bitwardencsv", "data.csv", {});
+
+    expect(response.success).toBe(true);
+    const message = (response.data as MessageResponse).message;
+    expect(message).toContain("1 item(s) could not be imported and were skipped");
+    expect(message).toContain("ssh-key-uuid");
+    expect(message).toContain("SSH key could not be imported");
   });
 });

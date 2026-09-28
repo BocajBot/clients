@@ -1,4 +1,6 @@
-import { EncString } from "../../key-management/crypto/models/enc-string";
+// eslint-disable-next-line no-restricted-imports
+import { EncString, SymmetricCryptoKey } from "@bitwarden/legacy-crypto";
+
 import { CipherRepromptType } from "../../vault/enums/cipher-reprompt-type";
 import { CipherType } from "../../vault/enums/cipher-type";
 import { Cipher as CipherDomain } from "../../vault/models/domain/cipher";
@@ -29,7 +31,7 @@ export class CipherExport {
     return req;
   }
 
-  static toView(req: CipherExport, view = new CipherView()) {
+  static toView(req: CipherExport, view = new CipherView(), allowDerivedSshKeys = false) {
     view.type = req.type;
     view.folderId = req.folderId;
     if (view.organizationId == null) {
@@ -43,7 +45,12 @@ export class CipherExport {
     view.notes = req.notes;
     view.favorite = req.favorite;
     view.reprompt = req.reprompt ?? CipherRepromptType.None;
-    view.key = req.key != null ? new EncString(req.key) : undefined;
+    // Only overwrite an existing view.key when the export JSON explicitly carries one.
+    // Leaving it absent (e.g. after CLI redaction) preserves the already-decrypted key
+    // that the bw-edit path fetches before calling toView(), preventing silent key loss.
+    if (req.key != null && !EncString.isSerializedEncString(req.key)) {
+      view.key = SymmetricCryptoKey.fromString(req.key);
+    }
 
     if (req.fields != null) {
       view.fields = req.fields.map((f) => FieldExport.toView(f));
@@ -73,7 +80,7 @@ export class CipherExport {
       case CipherType.SshKey:
         if (req.sshKey != null) {
           // toView only returns undefined when req is null, which we've already checked
-          view.sshKey = SshKeyExport.toView(req.sshKey)!;
+          view.sshKey = SshKeyExport.toView(req.sshKey, undefined, allowDerivedSshKeys)!;
         }
         break;
       case CipherType.BankAccount:
@@ -208,7 +215,10 @@ export class CipherExport {
     this.name = safeGetString(o.name) ?? "";
     this.notes = safeGetString(o.notes);
     if ("key" in o) {
-      this.key = o.key?.encryptedString;
+      this.key =
+        o.key instanceof SymmetricCryptoKey
+          ? o.key.toBase64()
+          : (o.key as EncString | undefined)?.encryptedString;
     }
 
     this.favorite = o.favorite;

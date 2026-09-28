@@ -2,14 +2,36 @@
   "bitwarden": {
     "message": "Bitwarden"
   },
+  "bitwardenBeta": {
+    "message": "Bitwarden Beta",
+    "description": "Product name for the beta channel; shown in the tray tooltip and About dialog"
+  },
   "filters": {
     "message": "Фильтры"
   },
   "allItems": {
     "message": "Все элементы"
   },
+  "allVaultItems": {
+    "message": "Все элементы хранилища"
+  },
+  "myItemsV2": {
+    "message": "Мои элементы"
+  },
+  "vaults": {
+    "message": "Хранилища"
+  },
+  "tools": {
+    "message": "Инструменты"
+  },
+  "manage": {
+    "message": "Управление"
+  },
   "favorites": {
     "message": "Избранные"
+  },
+  "favoritesFilterTooltip": {
+    "message": "Пометить элементы как избранные, чтобы отфильтровать их здесь."
   },
   "unfavorite": {
     "message": "Удалить из избранного"
@@ -103,6 +125,117 @@
   },
   "shared": {
     "message": "Общие"
+  },
+  "sharedFolder": {
+    "message": "Общая папка"
+  },
+  "sharedFolders": {
+    "message": "Общие папки"
+  },
+  "sharedFoldersInParent": {
+    "message": "Общие папки в $NAME$",
+    "description": "Titles the grid of shared folders nested directly inside the shared folder being viewed.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Engineering"
+      }
+    }
+  },
+  "sharedFolderCount": {
+    "message": "Общие папки: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "16"
+      }
+    }
+  },
+  "sharedFolderSingular": {
+    "message": "$COUNT$ общая папка",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "moreSharedFoldersShownAbove": {
+    "message": "$COUNT$ дополнительных общих папок отображаются над этой кнопкой",
+    "description": "Announced to screen readers when a collapsed grid of shared folders is expanded. The revealed shared folders render above the button that expanded them.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "moreSharedFoldersShownAboveSingular": {
+    "message": "Над этой кнопкой отображается еще 1 общая папка",
+    "description": "Announced to screen readers when a collapsed grid of shared folders is expanded. The revealed shared folders render above the button that expanded them."
+  },
+  "myFolder": {
+    "message": "Моя папка"
+  },
+  "myFolders": {
+    "message": "Мои папки"
+  },
+  "foldersFilterTooltip": {
+    "message": "Добавить папки к элементам, чтобы отфильтровать их здесь."
+  },
+  "myItemsFilterTooltip": {
+    "message": "Добавьте элементы в Мои элементы, чтобы отфильтровать их здесь."
+  },
+  "sharedFolderFilterTooltip": {
+    "message": "Добавляйте элементы в общую папку для фильтрации здесь."
+  },
+  "addSharedFolder": {
+    "message": "Добавить общую папку"
+  },
+  "newSharedFolder": {
+    "message": "Новая общая папка"
+  },
+  "searchSharedFolder": {
+    "message": "Поиск в общей папке"
+  },
+  "searchMyFolder": {
+    "message": "Поиск в моих папках"
+  },
+  "viewSharedFolderWithName": {
+    "message": "Просмотр общей папки - $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Shared folder 1"
+      }
+    }
+  },
+  "deleteSharedFolder": {
+    "message": "Удалить общую папку"
+  },
+  "deleteSharedFoldersCount": {
+    "message": "Удалить $COUNT$ общих папок",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "deleteSharedFolderKeepItemsDesc": {
+    "message": "Эта общая папка будет удалена безвозвратно. Элементы из папки удалены не будут."
+  },
+  "deleteSharedFoldersKeepItemsDesc": {
+    "message": "Эти общие папки будут удалены безвозвратно. Элементы в папках удалены не будут."
+  },
+  "deleteItemsAndSharedFoldersDesc": {
+    "message": "Выбранные элементы и общие папки будут удалены навсегда."
+  },
+  "sharedFolderDeleted": {
+    "message": "Общая папка удалена"
+  },
+  "sharedFoldersDeleted": {
+    "message": "Общие папки удалены"
   },
   "share": {
     "message": "Поделиться"
@@ -425,11 +558,15 @@
   "passphrase": {
     "message": "Парольная фраза"
   },
+  "passwordAnnounceSpace": {
+    "message": "пробел",
+    "description": "Screen-reader-only token substituted for a literal space character when announcing a password character-by-character. Screen readers collapse bare whitespace, so this word is read in place of the space."
+  },
   "editItem": {
     "message": "Изменение элемента"
   },
   "editItemWithName": {
-    "message": "Редактирование элемента - $NAME$",
+    "message": "Изменить элемент - $NAME$",
     "placeholders": {
       "name": {
         "content": "$1",
@@ -454,6 +591,9 @@
   },
   "launch": {
     "message": "Перейти"
+  },
+  "launchWebsite": {
+    "message": "Открыть сайт"
   },
   "copyValue": {
     "message": "Скопировать значение",
@@ -665,16 +805,25 @@
   "decryptionError": {
     "message": "Ошибка расшифровки"
   },
-  "couldNotDecryptVaultItemsBelow": {
-    "message": "Bitwarden не удалось расшифровать элемент(ы) хранилища, перечисленные ниже."
+  "couldNotDecryptVaultItem": {
+    "message": "Bitwarden не удалось расшифровать указанный ниже элемент хранилища. Обратитесь в службу поддержки Bitwarden и сообщите указанный ниже ID элемента, чтобы выяснить, можно ли его восстановить."
   },
-  "contactCSToAvoidDataLossPart1": {
-    "message": "Обратитесь в службу поддержки,",
-    "description": "This is part of a larger sentence. The full sentence will read 'Contact customer success to avoid additional data loss.'"
+  "couldNotDecryptVaultItems": {
+    "message": "Bitwarden не удалось расшифровать указанные ниже элементы хранилища. Обратитесь в службу поддержки Bitwarden и сообщите указанные ниже ID элементов, чтобы выяснить, можно ли их восстановить."
   },
-  "contactCSToAvoidDataLossPart2": {
-    "message": "чтобы избежать дополнительной потери данных.",
-    "description": "This is part of a larger sentence. The full sentence will read 'Contact customer success to avoid additional data loss.'"
+  "itemId": {
+    "message": "ID элемента",
+    "description": "Label for a field listing the unique identifier of a single vault item."
+  },
+  "itemIds": {
+    "message": "ID элементов",
+    "description": "Label for a field listing the unique identifiers of multiple vault items."
+  },
+  "copyId": {
+    "message": "Скопировать ID"
+  },
+  "copyAllIds": {
+    "message": "Скопировать все ID"
   },
   "january": {
     "message": "Январь"
@@ -750,7 +899,7 @@
     "message": "Тип"
   },
   "items": {
-    "message": "Items"
+    "message": "Элементы"
   },
   "firstName": {
     "message": "Имя"
@@ -862,6 +1011,60 @@
   "owner": {
     "message": "Владелец"
   },
+  "sharedFolderAriaLabel": {
+    "message": "Общая папка $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "marketing"
+      }
+    }
+  },
+  "collectionAriaLabel": {
+    "message": "Коллекция $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "marketing"
+      }
+    }
+  },
+  "myFolderAriaLabel": {
+    "message": "Моя папка $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "banking"
+      }
+    }
+  },
+  "folderAriaLabel": {
+    "message": "Папка $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "networking"
+      }
+    }
+  },
+  "ownerAriaLabel": {
+    "message": "Владелец $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "My Org Name"
+      }
+    }
+  },
+  "vaultAriaLabel": {
+    "message": "Хранилище $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "My Org Name"
+      }
+    }
+  },
   "addField": {
     "message": "Добавить поле"
   },
@@ -901,7 +1104,7 @@
   "linkedHelpText": {
     "message": "Используйте связанное поле, если у вас возникли проблемы с автозаполнением для конкретного сайта."
   },
-  "linkedLabelHelpText": {
+  "linkedFieldLabelHelpText": {
     "message": "Введите HTML-идентификатор поля, имя, aria-label, или плейсхолдер."
   },
   "folder": {
@@ -1045,6 +1248,24 @@
   "editFolder": {
     "message": "Изменить папку"
   },
+  "editFolderNamed": {
+    "message": "Изменить $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Social"
+      }
+    }
+  },
+  "deleteFolderNamed": {
+    "message": "Удалить $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Social"
+      }
+    }
+  },
   "regeneratePassword": {
     "message": "Создать новый пароль"
   },
@@ -1066,20 +1287,6 @@
   },
   "copyVerificationCodeTotp": {
     "message": "Скопировать код подтверждения (TOTP)"
-  },
-  "copyFieldCipherName": {
-    "message": "Копировать $FIELD$, $CIPHERNAME$",
-    "description": "Title for a button that copies a field value to the clipboard.",
-    "placeholders": {
-      "field": {
-        "content": "$1",
-        "example": "Username"
-      },
-      "ciphername": {
-        "content": "$2",
-        "example": "Login Item"
-      }
-    }
   },
   "copyPrivateKey": {
     "message": "Скопировать приватный ключ"
@@ -1225,7 +1432,7 @@
     "message": "Файл"
   },
   "photo": {
-    "message": "Photo"
+    "message": "Фото"
   },
   "selectFile": {
     "message": "Выбрать файл"
@@ -1242,11 +1449,41 @@
   "addedFolder": {
     "message": "Папка добавлена"
   },
+  "folderEdited": {
+    "message": "Папка изменена"
+  },
+  "enterAName": {
+    "message": "Введите название."
+  },
   "deleteFolderConfirmation": {
     "message": "Вы хотите удалить эту папку?"
   },
   "deletedFolder": {
     "message": "Папка удалена"
+  },
+  "foldersDeleted": {
+    "message": "Папки удалены"
+  },
+  "deleteFoldersCount": {
+    "message": "Удалить папок: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "deleteFolderDescription": {
+    "message": "При удалении папки $NAME$ она будет удалена из всех элементов, к которым она была применена. Сами элементы при этом удалены не будут.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Banking"
+      }
+    }
+  },
+  "deleteFoldersDescription": {
+    "message": "При удалении этих папок они будут удалены из всех элементов, к которым они были применены. Сами элементы при этом удалены не будут."
   },
   "loginOrCreateNewAccount": {
     "message": "Войдите или создайте новый аккаунт для доступа к вашему защищенному хранилищу."
@@ -1888,6 +2125,12 @@
   "showIconsChangePasswordUrls": {
     "message": "Показывать значки сайтов и извлекать URL изменения пароля"
   },
+  "showQuickCopyActionsInVault": {
+    "message": "Показать быстрые действия копирования в хранилище"
+  },
+  "noDetailsToCopy": {
+    "message": "Нет информации для копирования"
+  },
   "runInBackground": {
     "message": "Оставить Bitwarden работать в фоновом режиме"
   },
@@ -1984,6 +2227,21 @@
   "copyVerificationCode": {
     "message": "Скопировать код подтверждения"
   },
+  "noUsername": {
+    "message": "Нет имени пользователя"
+  },
+  "noPassword": {
+    "message": "Нет пароля"
+  },
+  "noVerificationCode": {
+    "message": "Нет кода подтверждения"
+  },
+  "noNumber": {
+    "message": "Нет номера"
+  },
+  "noSecurityCode": {
+    "message": "Нет кода безопасности"
+  },
   "copyUsername": {
     "message": "Скопировать имя пользователя"
   },
@@ -2002,9 +2260,6 @@
     "message": "Скопировать код безопасности",
     "description": "Copy credit card security code (CVV)"
   },
-  "cardNumber": {
-    "message": "номер карты"
-  },
   "premiumMembership": {
     "message": "Премиум"
   },
@@ -2014,62 +2269,14 @@
   "premiumManageAlert": {
     "message": "Вы можете управлять Премиум на bitwarden.com. Перейти на сайт сейчас?"
   },
-  "premiumRefresh": {
-    "message": "Обновить Премиум"
-  },
-  "premiumNotCurrentMember": {
-    "message": "Сейчас у вас отсутствует Премиум."
-  },
-  "premiumSignUpAndGet": {
-    "message": "Подпишитесь на Премиум и получите:"
-  },
   "premiumSignUpStorage": {
     "message": "1 ГБ зашифрованного хранилища для вложенных файлов."
-  },
-  "premiumSignUpStorageV2": {
-    "message": "Зашифрованного хранилища для вложенных файлов: $SIZE$",
-    "placeholders": {
-      "size": {
-        "content": "$1",
-        "example": "1 GB"
-      }
-    }
-  },
-  "premiumSignUpTwoStepOptions": {
-    "message": "Проприетарные варианты двухэтапной аутентификации, такие как YubiKey или Duo."
-  },
-  "premiumSignUpReports": {
-    "message": "Гигиена паролей, здоровье аккаунта и отчеты об утечках данных для обеспечения безопасности вашего хранилища."
-  },
-  "premiumSignUpTotp": {
-    "message": "Генератор кода подтверждения TOTP (2ЭА) для входа в ваше хранилище."
-  },
-  "premiumSignUpSupport": {
-    "message": "Приоритетная поддержка."
-  },
-  "premiumSignUpFuture": {
-    "message": "Все будущие функции Премиум. Их будет больше!"
   },
   "premiumPurchase": {
     "message": "Купить Премиум"
   },
   "premiumPurchaseAlertV2": {
     "message": "Премиум можно приобрести в настройках аккаунта в веб-версии Bitwarden."
-  },
-  "premiumCurrentMember": {
-    "message": "У вас есть Премиум!"
-  },
-  "premiumCurrentMemberThanks": {
-    "message": "Благодарим вас за поддержку Bitwarden."
-  },
-  "premiumPrice": {
-    "message": "Всего лишь $PRICE$ в год!",
-    "placeholders": {
-      "price": {
-        "content": "$1",
-        "example": "$10"
-      }
-    }
   },
   "month": {
     "message": "месяц"
@@ -2098,8 +2305,8 @@
   "clearGeneratorHistoryTitle": {
     "message": "Очистить историю генератора"
   },
-  "cleargGeneratorHistoryDescription": {
-    "message": "Если вы продолжите, все записи будут навсегда удалены из истории генератора. Вы уверены, что хотите продолжить?"
+  "clearGeneratorHistoryDescription": {
+    "message": "Если вы продолжите, все записи будут навсегда удалены из истории генератора. Вы уверены?"
   },
   "clear": {
     "message": "Очистить",
@@ -2133,6 +2340,128 @@
   },
   "selectAll": {
     "message": "Выбрать все"
+  },
+  "selectAllRows": {
+    "message": "Выбрать все строки"
+  },
+  "selectRow": {
+    "message": "Выбрать строку"
+  },
+  "showingItemRange": {
+    "message": "Показаны $START$ - $END$ из $TOTAL$",
+    "placeholders": {
+      "start": {
+        "content": "$1",
+        "example": "1"
+      },
+      "end": {
+        "content": "$2",
+        "example": "10"
+      },
+      "total": {
+        "content": "$3",
+        "example": "50"
+      }
+    }
+  },
+  "rowsPerPage": {
+    "message": "Строк на странице"
+  },
+  "rowsPerPageOption": {
+    "message": "$COUNT$ строк на странице",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "itemCount": {
+    "message": "$COUNT$ элементов",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "all": {
+    "message": "Все"
+  },
+  "clearAll": {
+    "message": "Очистить все"
+  },
+  "done": {
+    "message": "Готово"
+  },
+  "filter": {
+    "message": "Фильтр"
+  },
+  "filtersSelected": {
+    "message": "$COUNT$ выбрано",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "previousPage": {
+    "message": "Предыдущая страница"
+  },
+  "nextPage": {
+    "message": "Следующая страница"
+  },
+  "goToPage": {
+    "message": "Перейти на страницу"
+  },
+  "ofPageCount": {
+    "message": "из $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "15"
+      }
+    }
+  },
+  "noMatchingItems": {
+    "message": "Нет подходящих элементов"
+  },
+  "noFiltersMatch": {
+    "message": "Нет фильтров, соответствующих \"$SEARCH$\"",
+    "placeholders": {
+      "search": {
+        "content": "$1",
+        "example": "eng"
+      }
+    }
+  },
+  "oneFilterResult": {
+    "message": "1 результат",
+    "description": "Shown above a filter menu's option list when a search matches exactly one option."
+  },
+  "filterResults": {
+    "message": "$COUNT$ результатов",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    },
+    "description": "Shown above a filter menu's option list when a search matches more than one option."
+  },
+  "noFiltersMatchTerm": {
+    "message": "Нет фильтров, соответствующих “$SEARCH$”",
+    "placeholders": {
+      "search": {
+        "content": "$1",
+        "example": "eng"
+      }
+    },
+    "description": "Replaces noFiltersMatch, which is immutable in Crowdin, to use typographic quotes."
+  },
+  "clearSearch": {
+    "message": "Очистить поиск"
   },
   "selected": {
     "message": "Выбрано"
@@ -2374,11 +2703,8 @@
   "restrictCardTypeImportDesc": {
     "message": "Политика, установленная 1 или более организациями, не позволяет импортировать карты в ваши хранилища."
   },
-  "filePasswordAndConfirmFilePasswordDoNotMatch": {
-    "message": "\"Пароль к файлу\" и \"Подтверждение пароля к файлу\" не совпадают."
-  },
-  "done": {
-    "message": "Готово"
+  "filePasswordConfirmationMismatch": {
+    "message": "“Пароль к файлу“ и “Подтверждение пароля к файлу“ не совпадают."
   },
   "warning": {
     "message": "ВНИМАНИЕ",
@@ -2387,8 +2713,8 @@
   "confirmVaultExport": {
     "message": "Подтвердить экспорт хранилища"
   },
-  "exportWarningDesc": {
-    "message": "Экспортируемый файл содержит данные вашего хранилища в незашифрованном формате. Его не следует хранить или отправлять по небезопасным каналам (например по электронной почте). Удалите его сразу после использования."
+  "exportUnencryptedWarningDesc": {
+    "message": "Экспортируемый файл содержит данные вашего хранилища в незашифрованном формате. Не следует хранить или отправлять экспортный файл по незащищенным каналам (например, по email). Удалите его сразу после завершения работы с ним."
   },
   "encExportKeyWarningDesc": {
     "message": "При экспорте данные шифруются при помощи ключа шифрования учетной записи. Если вы решите сменить ключ шифрования, вам следует экспортировать данные повторно, поскольку вы не сможете расшифровать этот файл экспорта."
@@ -3289,6 +3615,30 @@
   "options": {
     "message": "Опции"
   },
+  "moreOptions": {
+    "message": "Больше опций"
+  },
+  "optionsForItem": {
+    "message": "Опции для $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Google Login"
+      }
+    }
+  },
+  "noSharedFolder": {
+    "message": "Нет общей папки"
+  },
+  "filterByName": {
+    "message": "Фильтр по $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Engineering"
+      }
+    }
+  },
   "sessionTimeout": {
     "message": "Время вашей сессии истекло. Пожалуйста, вернитесь и попробуйте войти снова."
   },
@@ -3502,7 +3852,7 @@
       }
     }
   },
-  "forwaderInvalidToken": {
+  "forwarderInvalidToken": {
     "message": "Неверный токен API $SERVICENAME$",
     "description": "Displayed when the user's API token is empty or rejected by the forwarding service.",
     "placeholders": {
@@ -3512,7 +3862,7 @@
       }
     }
   },
-  "forwaderInvalidTokenWithMessage": {
+  "forwarderInvalidTokenWithMessage": {
     "message": "Неверный токен $SERVICENAME$ API: $ERRORMESSAGE$",
     "description": "Displayed when the user's API token is rejected by the forwarding service with an error message.",
     "placeholders": {
@@ -3526,8 +3876,8 @@
       }
     }
   },
-  "forwaderInvalidOperation": {
-    "message": "$SERVICENAME$ отклонил(а) ваш запрос. Обратитесь за помощью к своему провайдеру.",
+  "forwarderInvalidOperation": {
+    "message": "$SERVICENAME$ отклонил ваш запрос. Обратитесь за помощью к своему провайдеру.",
     "description": "Displayed when the user is forbidden from using the API by the forwarding service.",
     "placeholders": {
       "servicename": {
@@ -3536,8 +3886,8 @@
       }
     }
   },
-  "forwaderInvalidOperationWithMessage": {
-    "message": "$SERVICENAME$ отклонил(а) ваш запрос: $ERRORMESSAGE$",
+  "forwarderInvalidOperationWithMessage": {
+    "message": "$SERVICENAME$ отклонил ваш запрос: $ERRORMESSAGE$",
     "description": "Displayed when the user is forbidden from using the API by the forwarding service with an error message.",
     "placeholders": {
       "servicename": {
@@ -3600,6 +3950,14 @@
       }
     }
   },
+  "forwarderWebsitePrefix": {
+    "message": "Добавить префикс сайта",
+    "description": "Labels the option to use the current website as a prefix for Fastmail masked email addresses"
+  },
+  "forwarderWebsitePrefixHint": {
+    "message": "Если эта опция включена, домен текущего сайта будет использоваться в качестве префикса для сгенерированного адреса email",
+    "description": "Hint text for the website prefix option in Fastmail forwarder settings"
+  },
   "hostname": {
     "message": "Имя хоста",
     "description": "Part of a URL."
@@ -3610,7 +3968,7 @@
   "apiKey": {
     "message": "Ключ API"
   },
-  "premiumSubcriptionRequired": {
+  "premiumSubscriptionRequired": {
     "message": "Требуется подписка Премиум"
   },
   "organizationIsDisabled": {
@@ -4196,7 +4554,7 @@
     "message": "Ничего не было импортировано."
   },
   "importPartialErrorTitle": {
-    "message": "$COUNT$ items will be skipped",
+    "message": "$COUNT$ элементов будут пропущены",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -4204,44 +4562,65 @@
       }
     }
   },
+  "importPartialErrorTitleSingular": {
+    "message": "$COUNT$ элемент будет пропущен",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
   "importPartialErrorDescription": {
-    "message": "The following items could not be read and will not be included in your import:"
+    "message": "Следующие элементы не удалось прочитать, и они не будут включены в ваш импорт:"
+  },
+  "importSkipReasonSshKeyParse": {
+    "message": "Этот ключ SSH не может быть импортирован"
+  },
+  "importSkipReasonUnsupportedType": {
+    "message": "Неподдерживаемый тип элемента"
+  },
+  "importSkipReasonGeneric": {
+    "message": "Этот элемент не может быть импортирован"
+  },
+  "identifier": {
+    "message": "Идентификатор"
   },
   "contact": {
-    "message": "Contact"
+    "message": "Контакт"
   },
   "membership": {
-    "message": "Membership"
+    "message": "Участники"
   },
   "passport": {
-    "message": "Passport"
+    "message": "Паспорт"
   },
   "driverLicense": {
-    "message": "Driver's license"
+    "message": "Водительское удостоверение"
   },
   "ssnCard": {
-    "message": "Identity card"
+    "message": "Удостоверение личности"
   },
   "birthCertificate": {
-    "message": "Birth certificate"
+    "message": "Свидетельство о рождении"
   },
   "databaseCredentials": {
-    "message": "Database credentials"
+    "message": "Учетные данные базы данных"
   },
   "serverCredentials": {
-    "message": "Server credentials"
+    "message": "Учетные данные сервера"
   },
   "softwareLicense": {
-    "message": "Software license"
+    "message": "Лицензия на программное обеспечение"
   },
   "healthInsurance": {
-    "message": "Health insurance"
+    "message": "Медицинское страхование"
   },
   "wifiCredentials": {
-    "message": "Wi-Fi credentials"
+    "message": "Учетные данные Wi-Fi"
   },
   "general": {
-    "message": "General"
+    "message": "Основное"
   },
   "importEncKeyError": {
     "message": "Ошибка при расшифровке экспортированного файла. Ваш ключ шифрования не совпадает с ключом шифрования, использованным при экспорте данных."
@@ -4285,6 +4664,79 @@
   "noFileChosen": {
     "message": "Файл не выбран"
   },
+  "noFileSelected": {
+    "message": "Файл не выбран"
+  },
+  "fileChosen": {
+    "message": "Выбран файл: $FILE_NAME$",
+    "placeholders": {
+      "file_name": {
+        "content": "$1",
+        "example": "image.png"
+      }
+    }
+  },
+  "fileAdded": {
+    "message": "Файл добавлен: $FILE_NAME$",
+    "placeholders": {
+      "file_name": {
+        "content": "$1",
+        "example": "image.png"
+      }
+    }
+  },
+  "filesAdded": {
+    "message": "Добавлено $COUNT$ файлов: $FILE_NAMES$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      },
+      "file_names": {
+        "content": "$2",
+        "example": "a.txt, b.txt, c.txt"
+      }
+    }
+  },
+  "fileRemoved": {
+    "message": "Файл удален: $FILE_NAME$",
+    "placeholders": {
+      "file_name": {
+        "content": "$1",
+        "example": "image.png"
+      }
+    }
+  },
+  "oneFileUploaded": {
+    "message": "1 файл загружен"
+  },
+  "filesUploaded": {
+    "message": "$COUNT$ файлов загружено",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "uploadedFiles": {
+    "message": "Загруженные файлы"
+  },
+  "clickToUploadOrDragAndDrop": {
+    "message": "Нажмите для загрузки или перетащите сюда"
+  },
+  "chooseFiles": {
+    "message": "Выберите файлы"
+  },
+  "maxFileSizeParam": {
+    "message": "Макс. размер файла: $SIZE$ МБ",
+    "placeholders": {
+      "size": {
+        "content": "$1",
+        "example": "500"
+      }
+    }
+  },
   "orCopyPasteFileContents": {
     "message": "или скопируйте и вставьте содержимое импортируемого файла"
   },
@@ -4298,6 +4750,207 @@
       }
     }
   },
+  "importHelpCenterInstructions": {
+    "message": "Ознакомьтесь с подробной инструкцией по $NAME$ на нашем сайте",
+    "description": "Followed by a hyperlink whose text is importHelpCenterLinkText, e.g. 'See detailed Safari instructions in our Help Center'.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Safari"
+      }
+    }
+  },
+  "importHelpCenterLinkText": {
+    "message": "Центр поддержки"
+  },
+  "importChromiumAliasPreamble": {
+    "message": "Этот процесс полностью аналогичен импорту из Google Chrome.",
+    "description": "Shown for Chromium-based browsers other than Chrome, immediately before importHelpCenterInstructions."
+  },
+  "importKeepassxInstructions": {
+    "message": "В приложении KeePassX для компьютера перейдите в меню База данных → Экспорт в файл CSV и сохраните файл CSV."
+  },
+  "importAviraInstructions": {
+    "message": "В веб-хранилище Avira перейдите в раздел Настройки → Мои данные → Экспорт данных и сохраните файл в формате CSV."
+  },
+  "importBlurInstructions": {
+    "message": "В веб-хранилище Blur выберите свое имя пользователя в верхней части страницы и перейдите в раздел Настройки → Экспорт данных, после чего нажмите Экспорт в CSV для вашего аккаунта."
+  },
+  "importSafeincloudInstructions": {
+    "message": "В приложении SafeInCloud для компьютера перейдите в меню Файл → Экспорт → Как XML и сохраните файл XML."
+  },
+  "importPadlockInstructions": {
+    "message": "В приложении Padlock для компьютера нажмите на значок меню в левом верхнем углу, перейдите в раздел Настройки → Экспорт и сохраните файл в формате CSV."
+  },
+  "importKeepass2Instructions": {
+    "message": "В приложении KeePass 2 для компьютера перейдите в меню Файл → Экспорт и выберите вариант KeePass XML (2.x)."
+  },
+  "importUpmInstructions": {
+    "message": "В приложении Universal Password Manager для компьютера перейдите в раздел База данных → Экспорт и сохраните файл в формате CSV."
+  },
+  "importSaferpassInstructions": {
+    "message": "В расширении для браузера SaferPass нажмите на значок меню в левом верхнем углу и перейдите в раздел Настройки. Нажмите кнопку Экспорт аккаунтов, чтобы сохранить файл в формате CSV."
+  },
+  "importMeldiumInstructions": {
+    "message": "Войдите в веб-хранилище Meldium и перейдите в раздел Настройки. Найдите функцию Экспорт данных и нажмите Показать мои данные, чтобы сохранить файл в формате CSV."
+  },
+  "importPassworddragonInstructions": {
+    "message": "В приложении Password Dragon для компьютера перейдите в меню Файл → Экспорт → В XML. В появившемся диалоговом окне выберите Все строки и установите флажки во всех полях. Нажмите кнопку Экспорт и сохраните файл XML."
+  },
+  "importEnpassCsvInstructions": {
+    "message": "В приложении Enpass для компьютера перейдите в меню Файл → Экспорт → Как CSV. Нажмите ОК в окне предупреждения и сохраните файл CSV. Обратите внимание, что импортер поддерживает только файлы, экспортированные при установленном в Enpass английском языке, поэтому настройте язык соответствующим образом."
+  },
+  "importEnpassJsonInstructions": {
+    "message": "В приложении Enpass 6 для компьютера нажмите кнопку меню и перейдите в раздел Файл → Экспорт. Выберите формат файла .json и сохраните файл."
+  },
+  "importPwsafeInstructions": {
+    "message": "В приложении Password Safe для компьютера перейдите в меню Файл → Экспорт → Формат XML... и сохраните файл XML."
+  },
+  "importDashlaneCsvInstructions": {
+    "message": "Войдите в Dashlane, нажмите Моя учетная запись → Настройки → Экспорт файла и выберите Экспорт в формат CSV. В результате будет загружен ZIP-архив, содержащий несколько CSV-файлов. Разархивируйте архив и импортируйте каждый CSV-файл по отдельности."
+  },
+  "importDashlaneJsonInstructions": {
+    "message": "Dashlane больше не поддерживает формат JSON. Используйте его только в том случае, если у вас уже есть файл JSON для импорта. При создании новых экспортов используйте импортер CSV."
+  },
+  "importMsecureInstructions": {
+    "message": "В приложении mSecure для компьютера перейдите в меню Файл → Экспорт → Файл CSV... и сохраните файл CSV."
+  },
+  "importStickypasswordInstructions": {
+    "message": "В приложении Sticky Password для компьютера перейдите в Меню (в правом верхнем углу) → Экспорт → Экспорт всего. Выберите вариант XML (незашифрованный формат) и сохраните файл XML."
+  },
+  "importTruekeyInstructions": {
+    "message": "В приложении True Key для компьютера нажмите на значок шестеренки (в правом верхнем углу), а затем перейдите в раздел Настройки приложения. Нажмите кнопку Экспорт, введите пароль и сохраните файл в формате CSV."
+  },
+  "importClipperzInstructions": {
+    "message": "Войдите в веб-приложение Clipperz (clipperz.is/app). Нажмите на значок меню в правом верхнем углу, чтобы развернуть панель навигации. Перейдите в раздел Данные → Экспорт. Нажмите кнопку Скачать HTML+JSON, чтобы сохранить файл HTML."
+  },
+  "importRoboformInstructions": {
+    "message": "В приложении RoboForm Editor для компьютера перейдите в раздел RoboForm (в левом верхнем углу) → Настройки → Учетная запись и данные и нажмите кнопку Экспорт. Выберите все свои данные, измените Формат на Файл CSV, а затем нажмите кнопку Экспорт, чтобы сохранить файл CSV. Примечание: RoboForm позволяет экспортировать только логины. Остальные элементы экспортированы не будут."
+  },
+  "importPassboltInstructions": {
+    "message": "Войдите в веб-хранилище Passbolt и перейдите в раздел Пароли. Выберите все пароли, которые хотите экспортировать, и нажмите кнопку Экспорт в верхней части списка. Выберите формат экспорта csv (lastpass) и нажмите кнопку Экспорт."
+  },
+  "importAscendoInstructions": {
+    "message": "В приложении Ascendo DataVault для компьютера перейдите в меню Инструменты → Экспорт. В появившемся диалоговом окне выберите вариант Все элементы (DVX, CSV). Нажмите кнопку ОК, чтобы сохранить файл CSV."
+  },
+  "importPasswordbossInstructions": {
+    "message": "В приложении Password Boss для компьютера перейдите в меню Файл → Экспорт данных → Password Boss JSON — без шифрования и сохраните файл JSON."
+  },
+  "importZohoInstructions": {
+    "message": "Войдите в веб-хранилище Zoho (vault.zoho.com). Перейдите в раздел Инструменты → Экспорт секретов. Выберите Все секреты и нажмите кнопку CSV в формате Zoho Vault. Выделите и скопируйте данные из текстового поля. Откройте текстовый редактор, например Блокнот, и вставьте данные. Сохраните данные из текстового редактора как",
+    "description": "Followed by a literal filename (zoho_export.csv) rendered as code, then a period."
+  },
+  "importSplashidInstructions": {
+    "message": "В приложении SplashID Safe для компьютера щелкните синий значок замка SplashID в правом верхнем углу. Перейдите в меню Экспорт → Экспорт в формат CSV и сохраните файл CSV."
+  },
+  "importPasskeepInstructions": {
+    "message": "В мобильном приложении PassKeep перейдите в раздел Резервное копирование/Восстановление. Найдите раздел Резервное копирование/Восстановление в формате CSV и нажмите Создать резервную копию в формате CSV, чтобы сохранить файл CSV."
+  },
+  "importGnomeInstructionsIntro": {
+    "message": "Убедитесь, что у вас установлены пакеты python-keyring и python-gnomekeyring. Сохраните ",
+    "description": "Followed by a hyperlink whose text is importGnomeInstructionsLinkText."
+  },
+  "importGnomeInstructionsLinkText": {
+    "message": "скрипт Python для импорта/экспорта ключей GNOME Keyring"
+  },
+  "importGnomeInstructionsScriptLabel": {
+    "message": "на рабочий стол с расширением",
+    "description": "Followed by a literal filename (pw_helper.py) rendered as code."
+  },
+  "importGnomeInstructionsRunTerminal": {
+    "message": ". Откройте терминал и запустите",
+    "description": "Follows the pw_helper.py filename; followed by a terminal command rendered as code."
+  },
+  "importGnomeInstructionsAndThen": {
+    "message": "а затем",
+    "description": "Between two terminal commands rendered as code."
+  },
+  "importGnomeInstructionsUploadResult": {
+    "message": ". Затем загрузите полученный файл",
+    "description": "Followed by a literal filename (my_passwords.json) rendered as code."
+  },
+  "importGnomeInstructionsFileHere": {
+    "message": "сюда, в Bitwarden.",
+    "description": "Follows the my_passwords.json filename."
+  },
+  "importPasswordagentInstructions": {
+    "message": "В приложении Password Agent для компьютера перейдите в меню Файл → Экспорт, нажмите кнопку Поля для экспорта и отметьте все поля, измените Формат вывода на CSV, а затем нажмите кнопку Старт, чтобы сохранить файл CSV."
+  },
+  "importPasspackInstructions": {
+    "message": "Войдите в хранилище сайта Passpack, перейдите в раздел Настройки → Экспорт, а затем нажмите кнопку Скачать, чтобы сохранить файл в формате CSV."
+  },
+  "importPassmanInstructions": {
+    "message": "Откройте хранилище Passman и нажмите Настройки в левом нижнем углу. В окне Настройки перейдите на вкладку Экспорт учетных данных и выберите JSON в качестве типа экспорта. Введите парольную фразу вашего хранилища и нажмите кнопку Экспорт, чтобы сохранить файл JSON."
+  },
+  "importAvastCsvInstructions": {
+    "message": "Откройте приложение Avast Passwords на компьютере и перейдите в раздел Настройки → Импорт/экспорт данных. Нажмите кнопку Экспорт напротив пункта Экспорт в файл CSV, чтобы сохранить файл CSV."
+  },
+  "importAvastJsonInstructions": {
+    "message": "Откройте приложение Avast Passwords на компьютере и перейдите в раздел Настройки → Импорт/экспорт данных. Нажмите кнопку Экспорт напротив пункта Экспорт в файл JSON, чтобы сохранить файл JSON."
+  },
+  "importFsecureInstructions": {
+    "message": "Откройте приложение F-Secure KEY для компьютера и перейдите в раздел Настройки → Экспорт паролей. Нажмите кнопку Экспорт, введите мастер-пароль и сохраните файл FSK."
+  },
+  "importKasperskyInstructions": {
+    "message": "Откройте приложение Kaspersky Password Manager для компьютера и перейдите в раздел Настройки → Импорт/экспорт. Найдите раздел Экспорт в текстовый файл и нажмите кнопку Экспорт, чтобы сохранить файл TXT."
+  },
+  "importRemembearInstructions": {
+    "message": "Откройте приложение RememBear для компьютера и перейдите в раздел Настройки →Аккаунт → Экспорт. Введите мастер-пароль и нажмите кнопку Экспортировать в любом случае, чтобы сохранить файл в формате CSV."
+  },
+  "importPasswordwalletInstructions": {
+    "message": "Откройте приложение PasswordWallet для компьютера и перейдите в меню Файл → Экспорт → Видимые записи в текстовый файл. Введите пароль и нажмите кнопку ОК, чтобы сохранить файл TXT."
+  },
+  "importMykiInstructions": {
+    "message": "Откройте расширение Myki для браузера на компьютере, перейдите в раздел Дополнительно → Экспорт учетных записей, а затем сосканируйте QR-код с помощью мобильного устройства. После этого в папку Загрузки на вашем компьютере будут сохранены несколько файлов в формате CSV."
+  },
+  "importSecuresafeInstructions": {
+    "message": "Экспортируйте хранилище паролей SecureSafe в файл CSV с разделителем запятой."
+  },
+  "importLogmeonceInstructions": {
+    "message": "Откройте расширение для браузера LogMeOnce, затем выберите Открыть меню → Экспорт в и нажмите Файл CSV, чтобы сохранить файл CSV."
+  },
+  "importBlackberryInstructions": {
+    "message": "Откройте приложение BlackBerry Password Keeper, затем перейдите в Настройки → Импорт/Экспорт. Выберите Экспорт паролей и следуйте инструкциям на экране, чтобы сохранить незашифрованный файл в формате CSV."
+  },
+  "importButtercupInstructions": {
+    "message": "Откройте приложение Buttercup для компьютера и разблокируйте хранилище. Щелкните правой кнопкой мыши по значку хранилища и выберите Экспорт, чтобы сохранить файл в формате CSV."
+  },
+  "importCodebookInstructions": {
+    "message": "Откройте приложение Codebook для компьютера и авторизуйтесь. Перейдите в меню Файл → Экспортировать все, затем нажмите Да в появившемся диалоговом окне и сохраните файл в формате CSV."
+  },
+  "importEncryptrInstructions": {
+    "message": "Откройте последнюю версию приложения Encryptr для компьютера и разрешите синхронизацию всех ваших данных. По завершении синхронизации значок загрузки в правом верхнем углу станет розовым. Нажмите на значок загрузки и сохраните файл в формате CSV."
+  },
+  "importYotiInstructions": {
+    "message": "В расширении Yoti для браузера нажмите Настройки, затем Экспорт сохраненных данных для входа и сохраните файл в формате CSV."
+  },
+  "importPsonoInstructions": {
+    "message": "Войдите в веб-хранилище Psono, щелкните раскрывающийся список Авторизован как и выберите Другие. Перейдите на вкладку Экспорт, выберите формат JSON, а затем нажмите Экспорт."
+  },
+  "importPasskyInstructions": {
+    "message": "Войдите на https:/vault.passky.org → Импорт и экспорт → Экспорт в разделе Passky. (Функция резервного копирования не поддерживается, так как данные зашифрованы)."
+  },
+  "importProtonpassInstructions": {
+    "message": "В расширении для браузера ProtonPass перейдите в раздел Настройки > Экспорт. Выполните экспорт без шифрования PGP и сохраните файл в формате ZIP."
+  },
+  "importPasswordxpInstructions": {
+    "message": "Выберите в меню База данных → Экспорт в файл.... → В настройках экспорта убедитесь, что установлен флажок Названия папок и заголовки столбцов. → Нажмите кнопку Обзор..., выберите целевой файл и установите его тип как CSV-файл."
+  },
+  "importNetwrixInstructions": {
+    "message": "Откройте FullClient, перейдите в главное меню и выберите пункт Экспорт. Запустите мастер экспорта паролей и следуйте инструкциям, чтобы экспортировать файл в формате CSV."
+  },
+  "importNordpassInstructions": {
+    "message": "Войдите в NordPass и откройте Настройки → Прокрутите вниз до раздела Импорт и экспорт и выберите Экспорт элементов → Введите мастер-пароль и нажмите Продолжить → Сохраните файл CSV на своем устройстве."
+  },
+  "importPassworddepot17Instructions": {
+    "message": "В приложении для компьютера перейдите в меню Инструменты → Экспорт → введите мастер-пароль → выберите формат XML (*.xml) в качестве формата экспорта → нажмите Далее → выберите записи, которые необходимо включить в экспорт → нажмите Далее, чтобы экспортировать данные в ранее выбранное место."
+  },
+  "importDelineaInstructions": {
+    "message": "Войдите в Delinea, найдите раздел Импорт/Экспорт -> выберите Экспорт -> выберите XML в качестве формата экспорта -> выберите QuantumLock в качестве типа аутентификатора -> введите свой пароль и нажмите Экспорт, чтобы сохранить файл XML."
+  },
+  "importDelineaCsvInstructions": {
+    "message": "Войдите в Delinea, найдите раздел Импорт/Экспорт -> выберите Экспорт -> выберите CSV в качестве формата экспорта -> выберите QuantumLock в качестве типа аутентификатора -> введите свой пароль и нажмите Экспорт, чтобы сохранить файл CSV."
+  },
   "confirmVaultImport": {
     "message": "Подтвердите импорт хранилища"
   },
@@ -4306,6 +4959,30 @@
   },
   "confirmFilePassword": {
     "message": "Подтвердите пароль к файлу"
+  },
+  "keePassMasterPassword": {
+    "message": "Мастер-пароль KeePass"
+  },
+  "addKeyFile": {
+    "message": "Добавить файл ключа"
+  },
+  "keyFileUpload": {
+    "message": "Загрузка файла ключа"
+  },
+  "kdbxFileUpload": {
+    "message": "Загрузка файла KDBX"
+  },
+  "acceptedFormatsKdbx": {
+    "message": "Допустимые форматы: kdbx"
+  },
+  "kdbxCorruptOrOutdated": {
+    "message": "Формат данных некорректен. Проверьте файл импорта и повторите попытку."
+  },
+  "kdbxWrongFileType": {
+    "message": "Этот файл не является допустимой базой данных KeePass (.kdbx). Выберите файл .kdbx и повторите попытку."
+  },
+  "kdbxFileTooLarge": {
+    "message": "Эта база данных KeePass слишком велика для импорта."
   },
   "exportSuccess": {
     "message": "Данные хранилища экспортированы"
@@ -4347,7 +5024,7 @@
     "message": "Сбой многофакторной аутентификации"
   },
   "keeperConnectionError": {
-    "message": "There was a problem communicating with Keeper. Please try the import again."
+    "message": "Возникла проблема при подключении к Keeper. Пожалуйста, попробуйте выполнить импорт еще раз."
   },
   "includeSharedFolders": {
     "message": "Включить общие папки"
@@ -4388,10 +5065,6 @@
   "browserProfile": {
     "message": "Профиль браузера"
   },
-  "seeDetailedInstructions": {
-    "message": "Подробные инструкции см. на нашем справочном сайте по адресу",
-    "description": "This is followed a by a hyperlink to the help website."
-  },
   "importDirectlyFromLastPass": {
     "message": "Импорт непосредственно из LastPass"
   },
@@ -4408,43 +5081,43 @@
     "message": "Вставьте YubiKey, связанный с аккаунтом LastPass, в USB-порт компьютера и нажмите на его кнопку."
   },
   "keeperEmail": {
-    "message": "Keeper email"
+    "message": "Адрес email Keeper"
   },
   "keeperEmailHint": {
-    "message": "Enter the email you use to log in to Keeper"
+    "message": "Введите адрес email, который вы используете для авторизации в Keeper"
   },
   "dataCenterLocation": {
-    "message": "Data center location"
+    "message": "Расположение дата-центра"
   },
   "keeperMasterPassword": {
-    "message": "Keeper master password"
+    "message": "Мастер-пароль Keeper"
   },
   "keeperMasterPasswordPrompt": {
-    "message": "Please enter your Keeper master password"
+    "message": "Пожалуйста, введите мастер-пароль Keeper"
   },
   "twoFactorCodePrompt": {
-    "message": "Please enter the code from your two-factor method"
+    "message": "Введите код, сгенерированный вашим средством двухфакторной аутентификации"
   },
   "totpCodePrompt": {
-    "message": "Please enter the code from your authenticator app"
+    "message": "Введите код из приложения-аутентификатора"
   },
   "smsCodePrompt": {
-    "message": "Please enter the code sent via text message"
+    "message": "Введите код, присланный в SMS"
   },
   "keeperDnaCodePrompt": {
-    "message": "Please enter the code from your Keeper DNA app"
+    "message": "Введите код из приложения Keeper DNA"
   },
   "adminApproval": {
-    "message": "Admin approval"
+    "message": "Подтверждение администратора"
   },
   "adminDeviceApprovalPushDesc": {
-    "message": "We've sent an admin approval request to your admin"
+    "message": "Мы отправили запрос на одобрение администратора вашему администратору"
   },
   "method": {
-    "message": "Method"
+    "message": "Метод"
   },
   "directImporter": {
-    "message": "Direct importer"
+    "message": "Прямой импортер"
   },
   "csv": {
     "message": "CSV"
@@ -4453,76 +5126,76 @@
     "message": "Json"
   },
   "ssoAuthRequired": {
-    "message": "SSO authentication required"
+    "message": "Требуется аутентификация SSO"
   },
   "keeperSsoDesc": {
-    "message": "Your Keeper account requires SSO authentication. Complete the sign-in in the browser window that was opened, then paste the token shown on the page."
+    "message": "Для входа в ваш аккаунт Keeper требуется аутентификация SSO. Завершите авторизацию в открывшемся окне браузера, а затем вставьте токен, отображенный на странице."
   },
   "keeperSsoAutoCaptureDesc": {
-    "message": "Complete the sign-in in the browser tab that was opened. The token will be captured automatically."
+    "message": "Завершите авторизацию на открывшейся вкладке браузера. Токен будет считан автоматически."
   },
   "ssoToken": {
-    "message": "SSO token"
+    "message": "Токен SSO"
   },
   "keeperAuthRequired": {
-    "message": "Keeper authentication required"
+    "message": "Требуется аутентификация Keeper"
   },
   "keeperDeviceApprovalRequired": {
-    "message": "Keeper device approval required"
+    "message": "Требуется подтверждение устройства Keeper"
   },
   "selectApprovalMethod": {
-    "message": "Approval methods"
+    "message": "Методы подтверждения"
   },
   "deviceApprovalNeeded": {
-    "message": "Device approval needed"
+    "message": "Требуется подтверждение устройства"
   },
   "selectApprovalMethodDesc": {
-    "message": "Approve this device by selecting a method below"
+    "message": "Подтвердите это устройство, выбрав один из способов ниже"
   },
   "keeperPush": {
-    "message": "Keeper Push"
+    "message": "Push-уведомление Keeper"
   },
   "twoFactorMethod": {
-    "message": "Two-factor method"
+    "message": "Метод двухфакторной аутентификации"
   },
   "emailVerification": {
-    "message": "Email verification"
+    "message": "Подтверждение email"
   },
   "approvalEmailDesc": {
-    "message": "Please check your email and enter the verification code below"
+    "message": "Пожалуйста, проверьте свою почту и введите код подтверждения ниже"
   },
   "otherDeviceApprovalPushDesc": {
-    "message": "Keeper Push notification sent to approved device"
+    "message": "Отправлено push-уведомление Keeper на авторизованное устройство"
   },
   "keeperPushSent": {
-    "message": "Keeper Push sent"
+    "message": "Отправлено push-уведомление Keeper"
   },
   "approvalRequestWillBeCanceled": {
-    "message": "Approval request will be canceled"
+    "message": "Запрос на подтверждение будет отменен"
   },
   "pendingApprovalCancelConfirmation": {
-    "message": "Are you sure you want to leave? Your admin approval request will be canceled."
+    "message": "Вы уверены, что хотите выйти? Ваш запрос на подтверждение администратором будет отменен."
   },
   "cancelRequest": {
-    "message": "Cancel request"
+    "message": "Отменить запрос"
   },
   "keeperMFARequired": {
-    "message": "Keeper two-factor authentication required"
+    "message": "Требуется двухфакторная аутентификация Keeper"
   },
   "mfaPushDesc": {
-    "message": "Approve the login request in your authentication app. This dialog will close automatically."
+    "message": "Подтвердите запрос на вход в приложении-аутентификаторе. Это окно закроется автоматически."
   },
   "selectTwoFactorMethod": {
-    "message": "Select two-factor method"
+    "message": "Выберите метод двухфакторной аутентификации"
   },
   "selectTwoFactorMethodDesc": {
-    "message": "Choose how you want to verify your identity."
+    "message": "Выберите способ подтверждения своей личности."
   },
   "authenticatorAppTotp": {
-    "message": "Authenticator app (TOTP)"
+    "message": "Приложение-аутентификатор (TOTP)"
   },
   "textMessageSms": {
-    "message": "Text message (SMS)"
+    "message": "Текстовое сообщение (SMS)"
   },
   "duoSecurity": {
     "message": "Duo Security"
@@ -4531,70 +5204,70 @@
     "message": "RSA SecurID"
   },
   "backupCodes": {
-    "message": "Backup codes"
+    "message": "Резервные коды"
   },
   "securityKeyU2f": {
-    "message": "Security key (U2F)"
+    "message": "Ключ безопасности (U2F)"
   },
   "securityKeyWebAuthn": {
-    "message": "Security key (WebAuthn)"
+    "message": "Ключ безопасности (WebAuthn)"
   },
   "keeperDna": {
     "message": "Keeper DNA"
   },
   "keeperDnaVerification": {
-    "message": "Keeper DNA verification"
+    "message": "Верификация Keeper DNA"
   },
   "keeperDnaPushWaiting": {
-    "message": "Approve the Keeper DNA notification on your device"
+    "message": "Подтвердите уведомление Keeper DNA на своем устройстве"
   },
   "selectKeeperDnaMethod": {
-    "message": "Select Keeper DNA method"
+    "message": "Выберите метод Keeper DNA"
   },
   "selectKeeperDnaMethodDesc": {
-    "message": "Choose how you want to verify with Keeper DNA."
+    "message": "Выберите способ подтверждения с помощью Keeper DNA."
   },
   "pushNotification": {
-    "message": "Push notification"
+    "message": "Push-уведомление"
   },
   "enterCodeManually": {
-    "message": "Enter code manually"
+    "message": "Введите код вручную"
   },
   "twoFactorAuthentication": {
-    "message": "Two-factor authentication"
+    "message": "Двухфакторная аутентификация"
   },
   "unknownMethod": {
-    "message": "Unknown method"
+    "message": "Неизвестный метод"
   },
   "selectDuoMethod": {
-    "message": "Select Duo method"
+    "message": "Выберите метод Duo"
   },
   "selectDuoMethodDesc": {
-    "message": "Choose how you want to verify with Duo Security."
+    "message": "Выберите способ подтверждения с помощью Duo Security.."
   },
   "duoPush": {
-    "message": "Duo Push"
+    "message": "Push-уведомление Duo"
   },
   "phoneCall": {
-    "message": "Phone call"
+    "message": "Телефонный вызов"
   },
   "duoVerification": {
-    "message": "Duo verification"
+    "message": "Верификация Duo"
   },
   "duoPushWaiting": {
-    "message": "Approve the Duo push notification on your device."
+    "message": "Подтвердите push-уведомление Duo на своем устройстве"
   },
   "duoSmsWaiting": {
-    "message": "A text message has been sent to your phone. Enter the code in the Duo app to continue."
+    "message": "На ваш телефон было отправлено SMS. Введите код в приложении Duo, чтобы продолжить."
   },
   "duoVoiceWaiting": {
-    "message": "Answer the phone call from Duo and follow the instructions."
+    "message": "Ответьте на звонок от Duo и следуйте инструкциям."
   },
   "tryAnotherMethod": {
-    "message": "Try another method"
+    "message": "Попробуйте другой способ"
   },
   "keeperUnsupported2faMethod": {
-    "message": "Your Keeper account requires a two-factor authentication method that is not currently supported by the direct importer."
+    "message": "Для вашего аккаунта Keeper требуется метод двухфакторной аутентификации, который в настоящее время не поддерживается прямым импортером."
   },
   "commonImportFormats": {
     "message": "Основные форматы",
@@ -4654,6 +5327,12 @@
   },
   "removePasskey": {
     "message": "Удалить passkey"
+  },
+  "deletePasskey": {
+    "message": "Удалить passkey"
+  },
+  "deletePasskeyConfirmation": {
+    "message": "Этот passkey будет навсегда удален из вашего логина. Действие невозможно отменить."
   },
   "passkeyRemoved": {
     "message": "Passkey удален"
@@ -4851,10 +5530,17 @@
     "message": "Изменить email аккаунта"
   },
   "passkeyLogin": {
-    "message": "Войти с passkey?"
+    "message": "Войти с passkey?",
+    "description": "Deprecated; we shouldn't use a question mark. Use passkeyLogin2 instead."
+  },
+  "passkeyLogin2": {
+    "message": "Войти с passkey"
   },
   "savePasskeyQuestion": {
     "message": "Сохранить passkey?"
+  },
+  "savePasskey": {
+    "message": "Сохранить passkey"
   },
   "saveNewPasskey": {
     "message": "Сохранить как новый логин"
@@ -4866,7 +5552,11 @@
     "message": "Нет подходящих логинов для этого сайта"
   },
   "overwritePasskey": {
-    "message": "Перезаписать passkey?"
+    "message": "Перезаписать passkey?",
+    "description": "Deprecated; we shouldn't use a question mark. Use overwritePasskey2 instead."
+  },
+  "overwritePasskey2": {
+    "message": "Перезаписать passkey"
   },
   "unableToSavePasskey": {
     "message": "Не удалось сохранить passkey"
@@ -4923,6 +5613,15 @@
     "message": "Вы не можете удалить коллекции с правами только на просмотр: $COLLECTIONS$",
     "placeholders": {
       "collections": {
+        "content": "$1",
+        "example": "Work, Personal"
+      }
+    }
+  },
+  "cannotRemoveViewOnlySharedFolders": {
+    "message": "Вы не можете удалить общие папки с правами только на просмотр: $SHAREDFOLDERS$",
+    "placeholders": {
+      "sharedfolders": {
         "content": "$1",
         "example": "Work, Personal"
       }
@@ -5026,8 +5725,23 @@
   "permitCipherDetailsDescription": {
     "message": "Bitwarden будет использовать сохраненные URI логинов, чтобы определить, какой значок или URL для смены пароля следует использовать для улучшения вашего взаимодействия. При использовании этого сервиса никакая информация не собирается и не сохраняется."
   },
+  "showQuickCopyActionsDetailsDescription": {
+    "message": "Добавьте 3 кнопки быстрого копирования рядом с элементами, чтобы скопировать в буфер обмена свой логин, пароль или код подтверждения."
+  },
   "assignToCollections": {
     "message": "Назначить коллекциям"
+  },
+  "addToSharedFolder": {
+    "message": "Добавить в общую папку"
+  },
+  "transferAndAdd": {
+    "message": "Трансфер и добавление"
+  },
+  "itemLower": {
+    "message": "элемент"
+  },
+  "itemsLower": {
+    "message": "элементы"
   },
   "assignToTheseCollections": {
     "message": "Назначить этим коллекциям"
@@ -5035,8 +5749,14 @@
   "bulkCollectionAssignmentDialogDescriptionSingular": {
     "message": "Только члены организации, имеющие доступ к этим коллекциям, смогут видеть элементы."
   },
+  "bulkVaultSharedFolderAssignmentDialogDescriptionSingular": {
+    "message": "Только пользователи хранилища, имеющие доступ к этим общим папкам, смогут видеть элемент."
+  },
   "bulkCollectionAssignmentDialogDescriptionPlural": {
     "message": "Только члены организации, имеющие доступ к этим коллекциям, смогут видеть элементы."
+  },
+  "bulkVaultSharedFolderAssignmentDialogDescriptionPlural": {
+    "message": "Только пользователи хранилища, имеющие доступ к этим общим папкам, смогут видеть элементы."
   },
   "noCollectionsAssigned": {
     "message": "Коллекции не назначены"
@@ -5096,8 +5816,20 @@
   "personalItemTransferWarningSingular": {
     "message": "1 элемент будет навсегда передан выбранной организации. Вы больше не будете владельцем этих элементов."
   },
+  "personalItemVaultTransferWarningSingular": {
+    "message": "1 элемент будет навсегда передан выбранному хранилищу. Вы больше не будете владельцем этих элементов."
+  },
   "personalItemsTransferWarningPlural": {
     "message": "$PERSONAL_ITEMS_COUNT$ элементов будут навсегда переданы выбранной организации. Вы больше не будете владельцем этих элементов.",
+    "placeholders": {
+      "personal_items_count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "personalItemsVaultTransferWarningPlural": {
+    "message": "$PERSONAL_ITEMS_COUNT$ элементов будут навсегда переданы выбранному хранилищу. Вы больше не будете владельцем этих элементов.",
     "placeholders": {
       "personal_items_count": {
         "content": "$1",
@@ -5121,17 +5853,32 @@
   "successfullyAssignedCollections": {
     "message": "Коллекции успешно назначены"
   },
+  "successfullyAddedSharedFolders": {
+    "message": "Общие папки успешно добавлены"
+  },
   "itemMovedToCollection": {
     "message": "Элемент перемещен в коллекцию"
+  },
+  "itemAddedToSharedFolder": {
+    "message": "Элемент добавлен в общую папку"
   },
   "itemMovedToCollections": {
     "message": "Элемент перемещен в коллекции"
   },
+  "itemAddedToSharedFolders": {
+    "message": "Элемент добавлен в общие папки"
+  },
   "itemsMovedToCollection": {
     "message": "Элементы перемещены в коллекцию"
   },
+  "itemsAddedToSharedFolder": {
+    "message": "Элементы добавлены в общую папку"
+  },
   "itemsMovedToCollections": {
     "message": "Элементы перемещены в коллекции"
+  },
+  "itemsAddedToSharedFolders": {
+    "message": "Элементы добавлены в общие папки"
   },
   "itemAssignedToCollections": {
     "message": "Элемент присвоен коллекциям"
@@ -5203,6 +5950,15 @@
   "showMore": {
     "message": "Больше"
   },
+  "showMoreCount": {
+    "message": "Показать еще $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
   "showLess": {
     "message": "Меньше"
   },
@@ -5219,7 +5975,7 @@
     "message": "Недопустимое сочетание клавиш"
   },
   "breadcrumbs": {
-    "message": "Breadcrumbs",
+    "message": "Гид",
     "description": "Accessible label for the breadcrumb navigation landmark."
   },
   "moreBreadcrumbs": {
@@ -5237,6 +5993,9 @@
   },
   "enableAutotypeShortcutPreview": {
     "message": "Включить сочетание клавиш ввода (предварительная версия функции)"
+  },
+  "enableAutotypeGaShortcut": {
+    "message": "Включить ярлык автоввода"
   },
   "enableAutotypeShortcutDescription": {
     "message": "Прежде чем использовать ярлык, убедитесь, что вы поставили курсор в нужное поле, чтобы избежать ввода данных в неправильное место."
@@ -5556,11 +6315,80 @@
   "noItemsInTrashDesc": {
     "message": "Элементы, которые вы удаляете, появятся здесь и будут удалены навсегда через 30 дней"
   },
+  "noItemsInTrashDescription": {
+    "message": "Элементы, которые вы удаляете, появятся здесь и будут удалены навсегда через 30 дней."
+  },
   "noItemsInVault": {
     "message": "В хранилище нет элементов"
   },
+  "noItemsInMyVault": {
+    "message": "В моем хранилище нет элементов"
+  },
+  "noItemsInOrganizationVault": {
+    "message": "Нет элементов в $VAULT_NAME$",
+    "placeholders": {
+      "vault_name": {
+        "content": "$1",
+        "example": "Acme Corp"
+      }
+    }
+  },
+  "noItemsInSharedFolder": {
+    "message": "Нет элементов в $VAULT_NAME$",
+    "placeholders": {
+      "vault_name": {
+        "content": "$1",
+        "example": "Engineering"
+      }
+    }
+  },
+  "emptyMyItems": {
+    "message": "В моих элементах нет элементов"
+  },
+  "noItemsInVaults": {
+    "message": "Ваши хранилища пусты"
+  },
+  "noItemsMatchSelectedFilters": {
+    "message": "Нет элементов, соответствующих выбранным фильтрам"
+  },
+  "noItemsMatchSearchTerm": {
+    "message": "Нет элементов совпадающих с \"$SEARCH_TERM$\"",
+    "placeholders": {
+      "search_term": {
+        "content": "$1",
+        "example": "example search"
+      }
+    }
+  },
   "emptyVaultDescription": {
     "message": "Хранилище защищает не только ваши пароли. Логины, идентификаторы, карты и заметки в нем надежно защищены."
+  },
+  "emptySharedFolderDescription": {
+    "message": "Добавьте элементы в эту общую папку, а затем предоставьте доступ другим пользователям $VAULT_NAME$.",
+    "placeholders": {
+      "vault_name": {
+        "content": "$1",
+        "example": "Acme Corp"
+      }
+    }
+  },
+  "emptyMyItemsDescription": {
+    "message": "Мои элементы - это ваше личное хранилище для элементов, которые остаются в $VAULT_NAME$, но не видны другим пользователям.",
+    "placeholders": {
+      "vault_name": {
+        "content": "$1",
+        "example": "Acme Corp"
+      }
+    }
+  },
+  "youHaveNoFolders": {
+    "message": "У вас нет папок."
+  },
+  "emptyFoldersDescription": {
+    "message": "Используйте папки для организации хранилищ. Они только для вас: никто больше не увидит и не будет их использовать."
+  },
+  "emptyVaultsDescription": {
+    "message": "Чтобы начать, добавьте логины, ID, карты и другие элементы."
   },
   "emptyFavorites": {
     "message": "В избранном нет элементов"
@@ -5573,6 +6401,12 @@
   },
   "clearFiltersOrTryAnother": {
     "message": "Очистите фильтры или попробуйте другой поисковый запрос"
+  },
+  "noSharedFoldersAdded": {
+    "message": "Нет добавленных общих папок"
+  },
+  "noSharedFoldersAddedDescription": {
+    "message": "Добавьте общую папку, чтобы безопасно делиться элементами хранилища с другими участниками."
   },
   "sendPasswordHelperText": {
     "message": "Пользователям необходимо будет ввести пароль для просмотра этой Send",
@@ -5930,5 +6764,179 @@
         "example": "Login"
       }
     }
+  },
+  "confirmPasskeyRegistrationMacOS": {
+    "message": "создать новый passkey $RPID$ для $USERNAME$",
+    "description": "Prompt for the user to create a passkey. Shown in macOS Touch ID prompt as \"Bitwarden is trying to {message}.\", so sentence capitalization and ending punctuation should be omitted.",
+    "placeholders": {
+      "rpId": {
+        "content": "$1",
+        "example": "example.com"
+      },
+      "username": {
+        "content": "$2",
+        "example": "user@acme.com"
+      }
+    }
+  },
+  "confirmPasskeyOverwriteMacOS": {
+    "message": "перезаписать passkey $RPID$ для $USERNAME$",
+    "description": "Prompt for the user to overwrite an existing passkey. Shown in macOS Touch ID prompt as \"Bitwarden is trying to {message}.\", so sentence capitalization and ending punctuation should be omitted.",
+    "placeholders": {
+      "rpId": {
+        "content": "$1",
+        "example": "example.com"
+      },
+      "username": {
+        "content": "$2",
+        "example": "user@acme.com"
+      }
+    }
+  },
+  "confirmPasskeyAssertionMacOS": {
+    "message": "войти как $USERNAME$ с помощью вашего passkey $RPID$",
+    "description": "Prompt for the user to use a passkey. Shown in macOS Touch ID prompt as \"Bitwarden is trying to {message}.\", so sentence capitalization and ending punctuation should be omitted.",
+    "placeholders": {
+      "rpId": {
+        "content": "$1",
+        "example": "example.com"
+      },
+      "username": {
+        "content": "$2",
+        "example": "user@acme.com"
+      }
+    }
+  },
+  "confirmPasskeyRegistrationWindows": {
+    "message": "Подтвердите свою личность, чтобы создать новый passkey $RPID$ для $USERNAME$.",
+    "description": "Prompt in Windows Hello to register a new passkey.",
+    "placeholders": {
+      "rpId": {
+        "content": "$1",
+        "example": "example.com"
+      },
+      "username": {
+        "content": "$2",
+        "example": "user@acme.com"
+      }
+    }
+  },
+  "confirmPasskeyOverwriteWindows": {
+    "message": "Подтвердите свою личность, чтобы перезаписать passkey $RPID$ для $USERNAME$.",
+    "description": "Prompt in Windows Hello to overwrite an existing passkey.",
+    "placeholders": {
+      "rpId": {
+        "content": "$1",
+        "example": "example.com"
+      },
+      "username": {
+        "content": "$2",
+        "example": "user@acme.com"
+      }
+    }
+  },
+  "confirmPasskeyAssertionWindows": {
+    "message": "Подтвердите свою личность, авторизировавшись как $USERNAME$ с вашим passkey $RPID$.",
+    "description": "Prompt in Windows Hello to use an existing passkey.",
+    "placeholders": {
+      "rpId": {
+        "content": "$1",
+        "example": "example.com"
+      },
+      "username": {
+        "content": "$2",
+        "example": "user@acme.com"
+      }
+    }
+  },
+  "permissions": {
+    "message": "Разрешения"
+  },
+  "viewItems": {
+    "message": "Просмотр элементов"
+  },
+  "viewItemsHidePass": {
+    "message": "Просмотр элементов, пароли скрыты"
+  },
+  "editItems": {
+    "message": "Изменение элементов"
+  },
+  "editItemsHidePass": {
+    "message": "Изменение элементов, пароли скрыты"
+  },
+  "shareVerb": {
+    "message": "Поделиться"
+  },
+  "peopleWhoCanView": {
+    "message": "Люди, которые могут просматривать",
+    "description": "Heading for the section listing who has access to view a shared vault item"
+  },
+  "shareEmailVerificationDescription": {
+    "message": "После того, как вы поделитесь этой ссылкой необходимо будет подтвердить свой адрес email с помощью кода, чтобы просмотреть элемент.",
+    "description": "Description explaining that recipients must verify their email before viewing a shared vault item"
+  },
+  "shareLinkExpiryHint": {
+    "message": "Ссылка перестанет действовать после указанной даты, однако получатели могут сохранить ранее переданную информацию. Чтобы отозвать доступ, необходимо заново сгенерировать учетные данные.",
+    "description": "Hint text explaining share link expiry behavior and how to revoke access"
+  },
+  "linkExpiresAfter": {
+    "message": "Ссылка истекает через",
+    "description": "Label for the expiry duration select field when creating a share link"
+  },
+  "oneTimeShare": {
+    "message": "Одноразовая ссылка",
+    "description": "Checkbox label indicating the share link can only be viewed once by the recipient"
+  },
+  "activeLinks": {
+    "message": "Активные ссылки",
+    "description": "Heading for the list of currently active share links for a vault item"
+  },
+  "linkCopiedToClipboard": {
+    "message": "Ссылка скопирована в буфер обмена",
+    "description": "Toast message shown when a share link URL is successfully copied to the clipboard"
+  },
+  "linkSaveFailed": {
+    "message": "Не удается создать ссылку общего доступа",
+    "description": "Toast message shown after a new share link fails to create"
+  },
+  "linkSavedAndCopied": {
+    "message": "Ссылка сохранена и скопирована в буфер обмена",
+    "description": "Toast message shown after a new share link is created and its URL is copied to the clipboard"
+  },
+  "linkSavedCopyFailed": {
+    "message": "Не удалось скопировать ссылку общего доступа в буфер обмена",
+    "description": "Toas message shown after a new share link is created but we were unable to copy it to the clipboard"
+  },
+  "shareLinkDeleted": {
+    "message": "Ссылка общего доступа удалена",
+    "description": "Toast message shown when an active share link is successfully deleted"
+  },
+  "shareLinkDeleteFailed": {
+    "message": "Не удалось удалить ссылку общего доступа",
+    "description": "Toast message shown when an active share link deletion is unsuccessful"
+  },
+  "shareViaLink": {
+    "message": "Поделиться по ссылке",
+    "description": "Menu option to share a vault item via a shareable link"
+  },
+  "itemSendTitle": {
+    "message": "Поделиться элементом хранилища $ITEM$",
+    "placeholders": {
+      "item": {
+        "content": "$1",
+        "example": "Test Login"
+      }
+    }
+  },
+  "shareLinkExpires": {
+    "message": "Истекает",
+    "description": "Label preceding the expiration date of an active share link."
+  },
+  "expires": {
+    "message": "Истекает",
+    "description": "Label for the expiration date of an access token."
+  },
+  "unknownCipher": {
+    "message": "Неизвестный элемент. Вам может потребоваться запросить разрешение на доступ к этому элементу."
   }
 }

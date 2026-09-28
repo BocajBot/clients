@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { mock, MockProxy } from "jest-mock-extended";
-import { of } from "rxjs";
+import { firstValueFrom, of, skip } from "rxjs";
 
 // AccessSelectorModule / SelectModule use browser observers not available in jsdom
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
@@ -30,6 +30,7 @@ import { ConfigService } from "@bitwarden/common/platform/abstractions/config/co
 import { I18nService } from "@bitwarden/common/platform/abstractions/i18n.service";
 import { PlatformUtilsService } from "@bitwarden/common/platform/abstractions/platform-utils.service";
 import { DIALOG_DATA, DialogRef, ToastService } from "@bitwarden/components";
+import { Vfo1TerminologyService } from "@bitwarden/vault";
 
 import { GroupApiService, GroupView } from "../../core";
 import { AccessItemType, CollectionPermission } from "../../shared/components/access-selector";
@@ -93,6 +94,7 @@ interface CreateOptions {
   groups?: GroupView[];
   users?: any[];
   batchBarEnabled?: boolean;
+  vfo1Enabled?: boolean;
 }
 
 async function createComponent(options: CreateOptions = {}): Promise<{
@@ -150,6 +152,13 @@ async function createComponent(options: CreateOptions = {}): Promise<{
       { provide: CollectionAdminService, useValue: collectionAdminService },
       { provide: ToastService, useValue: toastService },
       { provide: ConfigService, useValue: configService },
+      {
+        provide: Vfo1TerminologyService,
+        useValue: {
+          iconClass: (icon: string) => icon,
+          enabled: () => options.vfo1Enabled ?? false,
+        },
+      },
     ],
   }).compileComponents();
 
@@ -184,9 +193,11 @@ describe("BulkCollectionsDialogComponent", () => {
   afterEach(() => TestBed.resetTestingModule());
 
   describe("loading state", () => {
-    it("is false after data loads", async () => {
+    it("starts true and becomes false once data loads", async () => {
       const { component } = await createComponent();
-      expect((component as any).loading).toBe(false);
+      const loading$ = (component as any).loading$;
+      expect(await firstValueFrom(loading$)).toBe(true);
+      expect(await firstValueFrom(loading$.pipe(skip(1)))).toBe(false);
     });
   });
 
@@ -198,7 +209,7 @@ describe("BulkCollectionsDialogComponent", () => {
         users: [buildMiniUser("u1")],
       });
 
-      const items = (component as any).accessItems;
+      const items = await firstValueFrom((component as any).accessItems$);
       expect(items).toHaveLength(2);
       expect(items).toEqual(
         expect.arrayContaining([
@@ -351,6 +362,30 @@ describe("BulkCollectionsDialogComponent", () => {
       await component.submit();
 
       expect(mocks.i18nService.t).toHaveBeenCalledWith("collectionsEdited");
+    });
+
+    it("uses the shared folder singular message when the VFO1 flag is on", async () => {
+      const { component, mocks } = await createComponent({
+        collections: [collectionView("c1")],
+        batchBarEnabled: true,
+        vfo1Enabled: true,
+      });
+
+      await component.submit();
+
+      expect(mocks.i18nService.t).toHaveBeenCalledWith("sharedFolderEdited");
+    });
+
+    it("uses the shared folder plural message when the VFO1 flag is on", async () => {
+      const { component, mocks } = await createComponent({
+        collections: [collectionView("c1"), collectionView("c2")],
+        batchBarEnabled: true,
+        vfo1Enabled: true,
+      });
+
+      await component.submit();
+
+      expect(mocks.i18nService.t).toHaveBeenCalledWith("sharedFoldersEdited");
     });
 
     it("closes the dialog with a Saved result", async () => {

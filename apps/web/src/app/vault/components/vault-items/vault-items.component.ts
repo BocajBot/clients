@@ -32,7 +32,13 @@ import {
 } from "@bitwarden/common/vault/utils/cipher-view-like-utils";
 import { SortDirection, TableDataSource } from "@bitwarden/components";
 import { OrganizationId } from "@bitwarden/sdk-internal";
-import { RoutedVaultFilterService, VaultBatchBarService, VaultItem } from "@bitwarden/vault";
+import {
+  compareVaultItems,
+  RoutedVaultFilterService,
+  VaultBatchBarService,
+  VaultCopyButtonsService,
+  VaultItem,
+} from "@bitwarden/vault";
 
 import { GroupView } from "../../../admin-console/organizations/core";
 
@@ -75,9 +81,6 @@ export class VaultItemsComponent<C extends CipherViewLike> {
   // FIXME(https://bitwarden.atlassian.net/browse/CL-903): Migrate to Signals
   // eslint-disable-next-line @angular-eslint/prefer-signals
   @Input() useEvents: boolean;
-  // FIXME(https://bitwarden.atlassian.net/browse/CL-903): Migrate to Signals
-  // eslint-disable-next-line @angular-eslint/prefer-signals
-  @Input() showPremiumFeatures: boolean;
   // FIXME(https://bitwarden.atlassian.net/browse/CL-903): Migrate to Signals
   // eslint-disable-next-line @angular-eslint/prefer-signals
   @Input() showBulkMove: boolean;
@@ -157,15 +160,22 @@ export class VaultItemsComponent<C extends CipherViewLike> {
 
   protected editableItems: VaultItem<C>[] = [];
   protected dataSource = new TableDataSource<VaultItem<C>>();
-  private readonly _localSelection = new SelectionModel<VaultItem<C>>(true, [], true);
+  private readonly _localSelection = new SelectionModel<VaultItem<C>>(
+    true,
+    [],
+    true,
+    compareVaultItems,
+  );
   get selection(): SelectionModel<VaultItem<C>> {
     return this.batchBarService?.selection ?? this._localSelection;
   }
   protected canDeleteSelected$: Observable<boolean>;
   protected canRestoreSelected$: Observable<boolean>;
   protected disableMenu$: Observable<boolean>;
-  protected showCopyAndLaunchActions$: Observable<boolean>;
+  protected showQuickCopyActions$: Observable<boolean>;
   private restrictedTypes: RestrictedCipherType[] = [];
+
+  private readonly vaultCopyButtonsService = inject(VaultCopyButtonsService);
 
   constructor(
     protected cipherAuthorizationService: CipherAuthorizationService,
@@ -173,9 +183,10 @@ export class VaultItemsComponent<C extends CipherViewLike> {
     protected routedVaultFilterService: RoutedVaultFilterService,
     private configService: ConfigService,
   ) {
-    this.showCopyAndLaunchActions$ = this.configService.getFeatureFlag$(
-      FeatureFlag.PM28091_AddCopyAndQuickLaunchActions,
-    );
+    this.showQuickCopyActions$ = combineLatest([
+      this.configService.getFeatureFlag$(FeatureFlag.PM40435_QuickCopyIconSetting),
+      this.vaultCopyButtonsService.showQuickCopyActions$,
+    ]).pipe(map(([flagEnabled, settingEnabled]) => flagEnabled && settingEnabled));
     this.canDeleteSelected$ = this.selection.changed.pipe(
       startWith(null),
       switchMap(() => {
@@ -268,6 +279,16 @@ export class VaultItemsComponent<C extends CipherViewLike> {
 
   get showExtraColumn() {
     return this.showCollections || this.showGroups || this.showOwner;
+  }
+
+  /**
+   * Width of the options column. A row's copy and launch actions are absolutely positioned to the
+   * left of its options menu, so the column has to be wide enough to hold them all. Otherwise they
+   * render on top of the preceding columns, e.g. the owner badge.
+   */
+  protected optionsColumnWidthClass(showQuickCopyActions: boolean): string {
+    // Quick copy shows an icon per copyable field rather than a single combined copy menu
+    return showQuickCopyActions ? "tw-w-48" : "tw-w-32";
   }
 
   get isAllSelected() {

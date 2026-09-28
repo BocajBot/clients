@@ -14,6 +14,14 @@ import {
 // This import has been flagged as unallowed for this class. It may be involved in a circular dependency loop.
 // eslint-disable-next-line no-restricted-imports
 import { KeyService } from "@bitwarden/key-management";
+// eslint-disable-next-line no-restricted-imports
+import {
+  EncArrayBuffer,
+  EncryptService,
+  EncString,
+  LegacyCompatKeyService,
+  SymmetricCryptoKey,
+} from "@bitwarden/legacy-crypto";
 import { CipherListView } from "@bitwarden/sdk-internal";
 
 import { ApiService } from "../../abstractions/api.service";
@@ -21,8 +29,6 @@ import { AccountService } from "../../auth/abstractions/account.service";
 import { AutofillSettingsServiceAbstraction } from "../../autofill/services/autofill-settings.service";
 import { DomainSettingsService } from "../../autofill/services/domain-settings.service";
 import { FeatureFlag } from "../../enums/feature-flag.enum";
-import { EncryptService } from "../../key-management/crypto/abstractions/encrypt.service";
-import { EncString } from "../../key-management/crypto/models/enc-string";
 import { UriMatchStrategySetting } from "../../models/domain/domain-service";
 import { ErrorResponse } from "../../models/response/error.response";
 import { ListResponse } from "../../models/response/list.response";
@@ -35,8 +41,6 @@ import { uuidAsString } from "../../platform/abstractions/sdk/sdk.service";
 import { FileUploadType } from "../../platform/enums";
 import { MessageSender } from "../../platform/messaging";
 import Domain from "../../platform/models/domain/domain-base";
-import { EncArrayBuffer } from "../../platform/models/domain/enc-array-buffer";
-import { SymmetricCryptoKey } from "../../platform/models/domain/symmetric-crypto-key";
 import { StateProvider } from "../../platform/state";
 import { CipherId, CollectionId, OrganizationId, UserId } from "../../types/guid";
 import { OrgKey, UserKey } from "../../types/key";
@@ -72,6 +76,7 @@ import { CipherView } from "../models/view/cipher.view";
 import { PasswordHistoryView } from "../models/view/password-history.view";
 import { AddEditCipherInfo } from "../types/add-edit-cipher-info";
 import { CipherViewLike, CipherViewLikeUtils } from "../utils/cipher-view-like-utils";
+import { hydrateCiphersWithLocalData } from "../utils/hydrate-ciphers-with-local-data";
 
 import {
   ADD_EDIT_CIPHER_INFO_KEY,
@@ -111,6 +116,7 @@ export class CipherService implements CipherServiceAbstraction {
 
   constructor(
     private keyService: KeyService,
+    private legacyCompatKeyService: LegacyCompatKeyService,
     private domainSettingsService: DomainSettingsService,
     private apiService: ApiService,
     private i18nService: I18nService,
@@ -352,10 +358,30 @@ export class CipherService implements CipherServiceAbstraction {
   }
 
   private async getAllDecryptedUsingSdk(userId: UserId): Promise<CipherView[]> {
+    const decCiphers = await this.getDecryptedCiphers(userId);
+    if (decCiphers != null && decCiphers.length !== 0) {
+      return decCiphers;
+    }
+
+    // `localData` (e.g. lastUsedDate) is a client-only field the SDK does not populate on the
+    // decrypted views. Re-attach it here so every consumer of `cipherViews$`/`getAllDecrypted`
+    // sees it, matching the legacy and list-view decryption paths.
+    // (Note, the cached views above are already hydrated)
+    let localData: Record<CipherId, LocalData> | undefined;
+
+    // Wrap `localData` in try-catch so a failure to hydrate data doesn't cascade to a larger failed experience
+    try {
+      localData = await firstValueFrom(this.localData$(userId));
+    } catch {
+      localData = undefined;
+    }
+
     try {
       const result = await this.cipherSdkService.getAllDecrypted(userId);
 
-      const sortedSuccesses = result.successes.sort(this.getLocaleSortingFunction());
+      const sortedSuccesses = hydrateCiphersWithLocalData(result.successes, localData).sort(
+        this.getLocaleSortingFunction(),
+      );
 
       await this.setDecryptedCipherCache(sortedSuccesses, userId);
       await this.setFailedDecryptedCiphers(result.failures, userId);
@@ -621,8 +647,13 @@ export class CipherService implements CipherServiceAbstraction {
       return [];
     }
 
+    const userId = await firstValueFrom(this.accountService.activeAccount$.pipe(map((a) => a?.id)));
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
+    const orgKeys = await firstValueFrom(this.keyService.orgKeys$(userId));
+    const key = orgKeys?.[organizationId as OrganizationId] ?? null;
     const ciphers = response.data.map((cr) => new Cipher(new CipherData(cr)));
-    const key = await this.keyService.getOrgKey(organizationId);
     const decCiphers: CipherView[] = await Promise.all(
       ciphers.map(async (cipher) => {
         return await cipher.decrypt(key);
@@ -796,20 +827,21 @@ export class CipherService implements CipherServiceAbstraction {
   }
 
   private async createWithServerLegacy(
-    { cipher, encryptedFor }: EncryptionContext,
+    context: EncryptionContext,
     orgAdmin?: boolean,
   ): Promise<Cipher> {
+    const { cipher } = context;
     let response: CipherResponse;
     if (orgAdmin && cipher.organizationId != null) {
-      const request = new CipherCreateRequest({ cipher, encryptedFor });
+      const request = new CipherCreateRequest(context);
       response = await this.apiService.postCipherAdmin(request);
       const data = new CipherData(response, cipher.collectionIds);
       return new Cipher(data);
     } else if (cipher.collectionIds != null && cipher.collectionIds.length > 0) {
-      const request = new CipherCreateRequest({ cipher, encryptedFor });
+      const request = new CipherCreateRequest(context);
       response = await this.apiService.postCipherCreate(request);
     } else {
-      const request = new CipherRequest({ cipher, encryptedFor });
+      const request = new CipherRequest(context);
       response = await this.apiService.postCipher(request);
     }
 
@@ -860,18 +892,16 @@ export class CipherService implements CipherServiceAbstraction {
     return resultCipherView;
   }
 
-  async updateWithServerLegacy(
-    { cipher, encryptedFor }: EncryptionContext,
-    orgAdmin?: boolean,
-  ): Promise<Cipher> {
+  async updateWithServerLegacy(context: EncryptionContext, orgAdmin?: boolean): Promise<Cipher> {
+    const { cipher } = context;
     let response: CipherResponse;
     if (orgAdmin) {
-      const request = new CipherRequest({ cipher, encryptedFor });
+      const request = new CipherRequest(context);
       response = await this.apiService.putCipherAdmin(cipher.id, request);
       const data = new CipherData(response, cipher.collectionIds);
       return new Cipher(data, cipher.localData);
     } else if (cipher.edit) {
-      const request = new CipherRequest({ cipher, encryptedFor });
+      const request = new CipherRequest(context);
       response = await this.apiService.putCipher(cipher.id, request);
     } else {
       const request = new CipherPartialRequest(cipher);
@@ -1083,7 +1113,7 @@ export class CipherService implements CipherServiceAbstraction {
 
     const encFileName = await this.encryptService.encryptString(filename, cipherKeyOrVaultKey);
 
-    const attachmentKey = await this.keyService.makeDataEncKey(cipherKeyOrVaultKey);
+    const attachmentKey = await this.legacyCompatKeyService.makeDataEncKey(cipherKeyOrVaultKey);
     const encData = await this.encryptService.encryptFileData(
       new Uint8Array(data),
       attachmentKey[0],
@@ -2052,15 +2082,13 @@ export class CipherService implements CipherServiceAbstraction {
         return null;
       }
 
+      // `getAllDecryptedForUrl` already hydrates localData at the source, but this path
+      // caches the result in `sortedCiphersCache` and is read immediately after a
+      // lastLaunched/lastUsed update before `cipherViews$` necessarily re-decrypts.
+      // Re-hydrate from the current localData$ so the correct cipher is selected
+      // regardless of that emission timing.
       const localData = await firstValueFrom(this.localData$(userId));
-      if (localData) {
-        for (const view of ciphers) {
-          const data = localData[view.id as CipherId];
-          if (data) {
-            view.localData = data;
-          }
-        }
-      }
+      ciphers = hydrateCiphersWithLocalData(ciphers, localData);
 
       if (autofillOnPageLoad) {
         const autofillOnPageLoadDefault = await this.getAutofillOnPageLoadDefault();

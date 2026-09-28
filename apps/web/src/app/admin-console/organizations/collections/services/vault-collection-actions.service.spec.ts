@@ -25,7 +25,7 @@ import { CollectionId, OrganizationId, UserId } from "@bitwarden/common/types/gu
 import { CipherService } from "@bitwarden/common/vault/abstractions/cipher.service";
 import { TreeNode } from "@bitwarden/common/vault/models/domain/tree-node";
 import { DialogRef, DialogService, ToastService } from "@bitwarden/components";
-import { RoutedVaultFilterService } from "@bitwarden/vault";
+import { RoutedVaultFilterService, Vfo1TerminologyService } from "@bitwarden/vault";
 
 import {
   CollectionDialogAction,
@@ -94,6 +94,7 @@ describe("VaultCollectionActionsService", () => {
   let selectedCollection$: BehaviorSubject<TreeNode<CollectionAdminView> | undefined>;
   let messageSubject: Subject<{ command: string; [key: string]: unknown }>;
   let refreshEmitted: boolean;
+  let vfo1Enabled: boolean;
 
   const organization = buildOrg();
 
@@ -110,8 +111,9 @@ describe("VaultCollectionActionsService", () => {
     accountService = mock<AccountService>();
     routedVaultFilterService = mock<RoutedVaultFilterService>();
     vaultCollectionService = mock<VaultCollectionService>();
+    vfo1Enabled = false;
 
-    i18nService.t.mockReturnValue("translated");
+    i18nService.t.mockImplementation((key: string) => key);
     apiService.deleteCollection.mockResolvedValue(undefined);
     collectionService.delete.mockResolvedValue(undefined);
     cipherService.clear.mockResolvedValue(undefined);
@@ -143,6 +145,19 @@ describe("VaultCollectionActionsService", () => {
         { provide: RoutedVaultFilterService, useValue: routedVaultFilterService },
         { provide: VaultCollectionService, useValue: vaultCollectionService },
         { provide: MessageListener, useValue: new MessageListener(messageSubject.asObservable()) },
+        {
+          provide: Vfo1TerminologyService,
+          useValue: {
+            iconClass: (icon: string) => icon,
+            enabled: () => vfo1Enabled,
+            collectionQueryParams: (
+              collectionId: string | null | undefined,
+            ): { collectionId: string | null; sharedFolderId: string | null } =>
+              vfo1Enabled
+                ? { sharedFolderId: collectionId ?? null, collectionId: null }
+                : { collectionId: collectionId ?? null, sharedFolderId: null },
+          },
+        },
       ],
     });
 
@@ -275,7 +290,31 @@ describe("VaultCollectionActionsService", () => {
       expect(router.navigate).toHaveBeenCalledWith(
         [],
         expect.objectContaining({
-          queryParams: { collectionId: "parent-col" },
+          queryParams: { collectionId: "parent-col", sharedFolderId: null },
+        }),
+      );
+    });
+
+    it("navigates using sharedFolderId and nulls collectionId when VFO1 is enabled", async () => {
+      vfo1Enabled = true;
+      const collection = buildCollection({ id: "target-col" as CollectionId });
+      const parentCol = buildCollection({ id: "parent-col" as CollectionId });
+      const parentNode = buildTreeNode(parentCol);
+      selectedCollection$.next(buildTreeNode(collection, parentNode));
+
+      jest.mocked(openCollectionDialog).mockReturnValue(
+        makeDialogRef<CollectionDialogResult>({
+          action: CollectionDialogAction.Deleted,
+          collection: buildCollection(),
+        }),
+      );
+
+      await service.editCollection(collection, CollectionDialogTabType.Info, false);
+
+      expect(router.navigate).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({
+          queryParams: { sharedFolderId: "parent-col", collectionId: null },
         }),
       );
     });
@@ -377,7 +416,33 @@ describe("VaultCollectionActionsService", () => {
       await service.deleteCollection(collection);
 
       expect(toastService.showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ variant: "success" }),
+        expect.objectContaining({ variant: "success", message: "deletedCollectionId" }),
+      );
+    });
+
+    it("uses the deleteCollectionConfirmation key when the VFO1 flag is off", async () => {
+      const collection = buildCollection();
+      dialogService.openSimpleDialog.mockResolvedValue(true);
+
+      await service.deleteCollection(collection);
+
+      expect(dialogService.openSimpleDialog).toHaveBeenCalledWith(
+        expect.objectContaining({ content: { key: "deleteCollectionConfirmation" } }),
+      );
+    });
+
+    it("uses the shared folder confirmation/deleted keys when the VFO1 flag is on", async () => {
+      vfo1Enabled = true;
+      const collection = buildCollection();
+      dialogService.openSimpleDialog.mockResolvedValue(true);
+
+      await service.deleteCollection(collection);
+
+      expect(dialogService.openSimpleDialog).toHaveBeenCalledWith(
+        expect.objectContaining({ content: { key: "deleteSharedFolderConfirmation" } }),
+      );
+      expect(toastService.showToast).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: "success", message: "deletedSharedFolderId" }),
       );
     });
 
@@ -402,7 +467,25 @@ describe("VaultCollectionActionsService", () => {
       expect(router.navigate).toHaveBeenCalledWith(
         [],
         expect.objectContaining({
-          queryParams: { collectionId: "parent-col" },
+          queryParams: { collectionId: "parent-col", sharedFolderId: null },
+        }),
+      );
+    });
+
+    it("navigates using sharedFolderId and nulls collectionId when VFO1 is enabled", async () => {
+      vfo1Enabled = true;
+      const collection = buildCollection({ id: "target-col" as CollectionId });
+      const parentCol = buildCollection({ id: "parent-col" as CollectionId });
+      const parentNode = buildTreeNode(parentCol);
+      selectedCollection$.next(buildTreeNode(collection, parentNode));
+      dialogService.openSimpleDialog.mockResolvedValue(true);
+
+      await service.deleteCollection(collection);
+
+      expect(router.navigate).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({
+          queryParams: { sharedFolderId: "parent-col", collectionId: null },
         }),
       );
     });
@@ -435,7 +518,17 @@ describe("VaultCollectionActionsService", () => {
       await service.bulkEditCollectionAccess([], organization);
 
       expect(toastService.showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ variant: "error" }),
+        expect.objectContaining({ variant: "error", message: "noCollectionsSelected" }),
+      );
+    });
+
+    it("shows the shared folder error toast when no collections are provided and the VFO1 flag is on", async () => {
+      vfo1Enabled = true;
+
+      await service.bulkEditCollectionAccess([], organization);
+
+      expect(toastService.showToast).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: "error", message: "noSharedFoldersSelected" }),
       );
     });
 

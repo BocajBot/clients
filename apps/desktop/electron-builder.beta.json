@@ -1,6 +1,5 @@
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-
   "extraMetadata": {
     "name": "bitwarden-beta"
   },
@@ -16,6 +15,7 @@
   "afterSign": "scripts/after-sign.js",
   "afterPack": "scripts/after-pack.js",
   "beforePack": "scripts/before-pack.js",
+  "appxManifestCreated": "scripts/appx-manifest-created.js",
   "files": [
     "!node_modules/@bitwarden/desktop-napi/scripts",
     "!node_modules/@bitwarden/desktop-napi/src",
@@ -71,6 +71,7 @@
       "CFBundleDevelopmentRegion": "en"
     },
     "provisioningProfile": "bitwarden_desktop_developer_id.provisionprofile",
+    "icon": "icon.beta.icns",
     "singleArchFiles": "node_modules/@bitwarden/desktop-napi/desktop_napi.darwin-*.node",
     "x64ArchFiles": "{**/desktop_napi.darwin-*.node,**/bufferutil/**/darwin-*/*.node}",
     "extraFiles": [
@@ -93,7 +94,7 @@
     "artifactName": "Bitwarden-${version}-${arch}-mac.${ext}"
   },
   "dmg": {
-    "icon": "dmg.icns",
+    "icon": "dmg.beta.icns",
     "background": "resources/background.png",
     "sign": false,
     "contents": [
@@ -117,6 +118,7 @@
   },
   "win": {
     "electronUpdaterCompatibility": ">=0.0.1",
+    "icon": "icon.beta.ico",
     "target": ["portable", "nsis-web", "appx"],
     "signExts": [".dll", ".node"],
     "signtoolOptions": {
@@ -131,6 +133,20 @@
       {
         "from": "desktop_native/dist/bitwarden_chromium_import_helper.win32-${arch}.exe",
         "to": "bitwarden_chromium_import_helper.exe"
+      },
+      {
+        "from": "desktop_native/dist/windows_plugin_authenticator.win32-${arch}.exe",
+        "to": "bitwarden_plugin_authenticator.exe"
+      }
+    ],
+    "extraResources": [
+      {
+        "from": "resources/windows_plugin_authenticator_config.beta.json",
+        "to": "plugin_authenticator_config.json"
+      },
+      {
+        "from": "resources/windows_plugin_authenticator_logo.beta.svg",
+        "to": "plugin_authenticator_logo.svg"
       }
     ]
   },
@@ -148,7 +164,9 @@
   },
   "appx": {
     "artifactName": "Bitwarden-Beta-${version}-${arch}.${ext}",
-    "backgroundColor": "#175DDC",
+    "backgroundColor": "#FDC700",
+    "customExtensionsPath": "../custom-appx-extensions.beta.xml",
+    "minVersion": "10.0.14393.0",
     "applicationId": "BitwardenBeta",
     "identityName": "8bitSolutionsLLC.BitwardenBeta",
     "publisher": "CN=14D52771-DE3C-4886-B8BF-825BA7690418",
