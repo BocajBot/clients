@@ -740,7 +740,7 @@ describe("VaultPopupItemsService", () => {
     });
 
     it("should reset other filters, select the collection, and clear the search text", () => {
-      const collectionOption = { value: mockCollections[0], children: [] };
+      const collectionOption = { value: mockCollections[0], children: [] as never[] };
       vaultPopupListFiltersServiceMock.collections$ = of([collectionOption]) as any;
       const applyFilterSpy = jest.spyOn(service, "applyFilter");
 
@@ -756,7 +756,7 @@ describe("VaultPopupItemsService", () => {
     });
 
     it("should resolve a collection nested within a parent option", () => {
-      const child = { value: mockCollections[1], children: [] };
+      const child = { value: mockCollections[1], children: [] as never[] };
       const parent = { value: mockCollections[0], children: [child] };
       vaultPopupListFiltersServiceMock.collections$ = of([parent]) as any;
 
