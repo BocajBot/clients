@@ -8,7 +8,6 @@ import {
   combineLatest,
   debounce,
   distinctUntilChanged,
-  filter,
   map,
   timer,
 } from "rxjs";
@@ -47,14 +46,9 @@ export class VaultSearchComponent {
   }
 
   subscribeToLatestSearchText(): Subscription {
-    return this.vaultPopupItemsService.searchText$
-      .pipe(
-        takeUntilDestroyed(),
-        filter((data) => !!data),
-      )
-      .subscribe((text) => {
-        this.searchText = text;
-      });
+    return this.vaultPopupItemsService.searchText$.pipe(takeUntilDestroyed()).subscribe((text) => {
+      this.searchText = text ?? "";
+    });
   }
 
   subscribeToApplyFilter(): void {
