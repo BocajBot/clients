@@ -111,6 +111,7 @@ fi
 if [[ "$RUN_TESTS" == "1" ]]; then
   npm test -- --runInBand \
     apps/browser/src/autofill/services/autofill.service.spec.ts \
+    apps/browser/src/autofill/background/autofill-orchestrator.spec.ts \
     apps/browser/src/vault/popup/services/vault-popup-items.service.spec.ts
 fi
 
