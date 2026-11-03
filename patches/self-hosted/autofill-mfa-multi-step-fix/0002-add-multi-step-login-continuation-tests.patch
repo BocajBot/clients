@@ -1,158 +1,107 @@
-diff --git a/apps/browser/src/autofill/services/autofill.service.spec.ts b/apps/browser/src/autofill/services/autofill.service.spec.ts
-index b5be10246fc173073c6eb10b696607167349d165..019791361ee743fbb1d93820fb9fd99e0432ee39 100644
---- a/apps/browser/src/autofill/services/autofill.service.spec.ts
-+++ b/apps/browser/src/autofill/services/autofill.service.spec.ts
-@@ -1229,6 +1229,7 @@ describe("AutofillService", () => {
-             fields: [
-               createAutofillFieldMock({
-                 opid: "username-field",
-+                htmlName: "username",
-                 form: "validFormId",
-                 elementNumber: 1,
-               }),
-@@ -1418,6 +1419,124 @@ describe("AutofillService", () => {
-         expect(result).toEqual({ didAutofill: false });
-       });
+diff --git a/apps/browser/src/autofill/background/autofill-orchestrator.spec.ts b/apps/browser/src/autofill/background/autofill-orchestrator.spec.ts
+index e29ef87f1c8e39bb4ba5751b7fececa9cf797366..12f7c395e7e84bee5ef0add2a34cb1d1d689748f 100644
+--- a/apps/browser/src/autofill/background/autofill-orchestrator.spec.ts
++++ b/apps/browser/src/autofill/background/autofill-orchestrator.spec.ts
+@@ -601,6 +601,102 @@
+       expect(updateOverlayCiphers).toHaveBeenCalledTimes(1);
      });
+ 
++    describe("password-only multi-step login continuation", () => {
++      const passwordOnlyPage = (): PageDetail => {
++        const pd = pageDetail(1, 0);
++        pd.details.fields = [createAutofillFieldMock({
++          opid: "password-step", type: "password", htmlName: "password", form: "validFormId",
++        })];
++        return pd;
++      };
 +
-+    describe("given a multi-step login page that only shows a password field", () => {
-+      const multiStepLoginContinuationWindowMs = 2 * 60 * 1000;
-+      let recentlyUsedCipher: CipherView;
-+      let nextCipher: CipherView;
-+
-+      beforeEach(() => {
-+        // A password-only step (no viewable username field) is the signal that the
-+        // user is mid-way through a multi-step login.
-+        pageDetails = [
-+          {
-+            frameId: 1,
-+            tab: createChromeTabMock(),
-+            details: createAutofillPageDetailsMock({
-+              fields: [
-+                createAutofillFieldMock({
-+                  opid: "password-field",
-+                  type: "password",
-+                  form: "validFormId",
-+                  elementNumber: 1,
-+                }),
-+              ],
-+            }),
-+          },
-+        ];
-+
-+        recentlyUsedCipher = mock<CipherView>({
-+          reprompt: CipherRepromptType.None,
-+          localData: { lastUsedDate: Date.now().valueOf() },
++      it("reuses a recent login without advancing rotation", async () => {
++        const pd = passwordOnlyPage();
++        const recentCipher = makeCipher(CipherType.Login, {
++          id: "recent", localData: { lastUsedDate: NOW - 1000 },
 +        });
-+        nextCipher = mock<CipherView>({ reprompt: CipherRepromptType.None, localData: {} });
-+      });
++        cipherService.getLastUsedForUrl.mockResolvedValue(recentCipher);
++        autofillService.collectPageDetailsFromTab$.mockReturnValue(of([pd]));
++        autofillService.doAutoFill.mockResolvedValue({ outcome: AutofillOutcome.Filled });
 +
-+      it("continues with the recently used cipher and does not advance the last used index", async () => {
-+        const totpCode = "123456";
-+        jest
-+          .spyOn(autofillService, "doAutoFill")
-+          .mockResolvedValueOnce({ didAutofill: true, totp: totpCode });
-+        jest.spyOn(cipherService, "getLastUsedForUrl").mockResolvedValueOnce(recentlyUsedCipher);
-+        jest.spyOn(cipherService, "getNextCipherForUrl");
-+        jest.spyOn(cipherService, "updateLastUsedIndexForUrl");
++        autofillOrchestrator.autofillActiveTabFromCommand(pd.tab);
++        await flushPromises();
 +
-+        const result = await autofillService.doAutoFillOnTab(pageDetails, tab, true);
-+
-+        expect(cipherService.getLastUsedForUrl).toHaveBeenCalledWith(tab.url, mockUserId, true);
++        expect(cipherService.getLastUsedForUrl).toHaveBeenCalledWith(DEFAULT_URL, "user-1", true);
 +        expect(cipherService.getNextCipherForUrl).not.toHaveBeenCalled();
++        expect(autofillService.doAutoFill).toHaveBeenCalledWith(
++          expect.objectContaining({ cipher: recentCipher }),
++        );
 +        expect(cipherService.updateLastUsedIndexForUrl).not.toHaveBeenCalled();
++      });
++
++      it("rotates when the previous login is older than two minutes", async () => {
++        const pd = passwordOnlyPage();
++        cipherService.getLastUsedForUrl.mockResolvedValue(makeCipher(CipherType.Login, {
++          id: "old", localData: { lastUsedDate: NOW - 120001 },
++        }));
++        const next = makeCipher(CipherType.Login, { id: "next" });
++        cipherService.getNextCipherForUrl.mockResolvedValue(next);
++        autofillService.collectPageDetailsFromTab$.mockReturnValue(of([pd]));
++        autofillService.doAutoFill.mockResolvedValue({ outcome: AutofillOutcome.Filled });
++
++        autofillOrchestrator.autofillActiveTabFromCommand(pd.tab);
++        await flushPromises();
++
++        expect(cipherService.getNextCipherForUrl).toHaveBeenCalledWith(DEFAULT_URL, "user-1");
 +        expect(autofillService.doAutoFill).toHaveBeenCalledWith(
-+          expect.objectContaining({ cipher: recentlyUsedCipher }),
++          expect.objectContaining({ cipher: next }),
 +        );
-+        expect(result).toEqual({ didAutofill: true, totp: totpCode });
++        expect(cipherService.updateLastUsedIndexForUrl).toHaveBeenCalledWith(DEFAULT_URL);
 +      });
 +
-+      it("advances to the next cipher when the recently used cipher is older than the continuation window", async () => {
-+        recentlyUsedCipher.localData.lastUsedDate =
-+          Date.now().valueOf() - (multiStepLoginContinuationWindowMs + 1);
-+        const totpCode = "123456";
-+        jest
-+          .spyOn(autofillService, "doAutoFill")
-+          .mockResolvedValueOnce({ didAutofill: true, totp: totpCode });
-+        jest.spyOn(cipherService, "getLastUsedForUrl").mockResolvedValueOnce(recentlyUsedCipher);
-+        jest.spyOn(cipherService, "getNextCipherForUrl").mockResolvedValueOnce(nextCipher);
-+        jest.spyOn(cipherService, "updateLastUsedIndexForUrl");
++      it("rotates when there is no previous login", async () => {
++        const pd = passwordOnlyPage();
++        cipherService.getLastUsedForUrl.mockResolvedValue(undefined as unknown as CipherView);
++        autofillService.collectPageDetailsFromTab$.mockReturnValue(of([pd]));
++        autofillService.doAutoFill.mockResolvedValue({ outcome: AutofillOutcome.Filled });
 +
-+        const result = await autofillService.doAutoFillOnTab(pageDetails, tab, true);
++        autofillOrchestrator.autofillActiveTabFromCommand(pd.tab);
++        await flushPromises();
 +
-+        expect(cipherService.getNextCipherForUrl).toHaveBeenCalledWith(tab.url, mockUserId);
-+        expect(cipherService.updateLastUsedIndexForUrl).toHaveBeenCalledWith(tab.url);
-+        expect(autofillService.doAutoFill).toHaveBeenCalledWith(
-+          expect.objectContaining({ cipher: nextCipher }),
-+        );
-+        expect(result).toEqual({ didAutofill: true, totp: totpCode });
++        expect(cipherService.getNextCipherForUrl).toHaveBeenCalledWith(DEFAULT_URL, "user-1");
++        expect(cipherService.updateLastUsedIndexForUrl).toHaveBeenCalledWith(DEFAULT_URL);
 +      });
 +
-+      it("advances to the next cipher when there is no recently used cipher", async () => {
-+        const totpCode = "123456";
-+        jest
-+          .spyOn(autofillService, "doAutoFill")
-+          .mockResolvedValueOnce({ didAutofill: true, totp: totpCode });
-+        jest.spyOn(cipherService, "getLastUsedForUrl").mockResolvedValueOnce(null);
-+        jest.spyOn(cipherService, "getNextCipherForUrl").mockResolvedValueOnce(nextCipher);
-+        jest.spyOn(cipherService, "updateLastUsedIndexForUrl");
++      it("rotates normally if a visible username field is still present", async () => {
++        const pd = passwordOnlyPage();
++        pd.details.fields.push(createAutofillFieldMock({
++          opid: "username-step", type: "text", htmlName: "username", form: "validFormId",
++        }));
++        autofillService.collectPageDetailsFromTab$.mockReturnValue(of([pd]));
++        autofillService.doAutoFill.mockResolvedValue({ outcome: AutofillOutcome.Filled });
 +
-+        const result = await autofillService.doAutoFillOnTab(pageDetails, tab, true);
++        autofillOrchestrator.autofillActiveTabFromCommand(pd.tab);
++        await flushPromises();
 +
-+        expect(cipherService.getNextCipherForUrl).toHaveBeenCalledWith(tab.url, mockUserId);
-+        expect(cipherService.updateLastUsedIndexForUrl).toHaveBeenCalledWith(tab.url);
-+        expect(autofillService.doAutoFill).toHaveBeenCalledWith(
-+          expect.objectContaining({ cipher: nextCipher }),
-+        );
-+        expect(result).toEqual({ didAutofill: true, totp: totpCode });
-+      });
-+    });
-+
-+    describe("given a login page that still shows a username field", () => {
-+      let cipher: CipherView;
-+
-+      beforeEach(() => {
-+        cipher = mock<CipherView>({ reprompt: CipherRepromptType.None, localData: {} });
-+      });
-+
-+      it("advances to the next cipher rather than continuing a multi-step login", async () => {
-+        const totpCode = "123456";
-+        jest
-+          .spyOn(autofillService, "doAutoFill")
-+          .mockResolvedValueOnce({ didAutofill: true, totp: totpCode });
-+        jest.spyOn(cipherService, "getNextCipherForUrl").mockResolvedValueOnce(cipher);
-+        jest.spyOn(cipherService, "getLastUsedForUrl");
-+        jest.spyOn(cipherService, "updateLastUsedIndexForUrl");
-+
-+        const result = await autofillService.doAutoFillOnTab(pageDetails, tab, true);
-+
-+        expect(cipherService.getNextCipherForUrl).toHaveBeenCalledWith(tab.url, mockUserId);
 +        expect(cipherService.getLastUsedForUrl).not.toHaveBeenCalled();
-+        expect(cipherService.updateLastUsedIndexForUrl).toHaveBeenCalledWith(tab.url);
-+        expect(result).toEqual({ didAutofill: true, totp: totpCode });
++        expect(cipherService.getNextCipherForUrl).toHaveBeenCalledWith(DEFAULT_URL, "user-1");
++        expect(cipherService.updateLastUsedIndexForUrl).toHaveBeenCalledWith(DEFAULT_URL);
++      });
++
++      it("honors reprompt without rotating the continuation", async () => {
++        const pd = passwordOnlyPage();
++        const recent = makeCipher(CipherType.Login, {
++          id: "protected", localData: { lastUsedDate: NOW - 1000 },
++        });
++        cipherService.getLastUsedForUrl.mockResolvedValue(recent);
++        autofillService.isPasswordRepromptRequired.mockResolvedValue(true);
++        autofillService.collectPageDetailsFromTab$.mockReturnValue(of([pd]));
++
++        autofillOrchestrator.autofillActiveTabFromCommand(pd.tab);
++        await flushPromises();
++
++        expect(autofillService.isPasswordRepromptRequired).toHaveBeenCalledWith(recent, pd.tab);
++        expect(autofillService.doAutoFill).not.toHaveBeenCalled();
++        expect(cipherService.updateLastUsedIndexForUrl).not.toHaveBeenCalled();
 +      });
 +    });
-   });
- 
-   describe("doAutoFillActiveTab", () => {
-@@ -1434,6 +1553,7 @@ describe("AutofillService", () => {
-             fields: [
-               createAutofillFieldMock({
-                 opid: "username-field",
-+                htmlName: "username",
-                 form: "validFormId",
-                 elementNumber: 1,
-               }),
-diff --git a/apps/browser/src/autofill/services/autofill.service.ts b/apps/browser/src/autofill/services/autofill.service.ts
-index e486ae409ca2ddcd9e17e76744b66bc8185b0547..ca31f415305b7648309ebc175868334c4112cf85 100644
---- a/apps/browser/src/autofill/services/autofill.service.ts
-+++ b/apps/browser/src/autofill/services/autofill.service.ts
-@@ -654,7 +654,7 @@ export default class AutofillService implements AutofillServiceInterface {
-         const lastUsedDate = lastUsedCipher?.localData?.lastUsedDate;
-         const lastUsedRecently =
-           typeof lastUsedDate === "number" &&
--          Date.now().valueOf() - lastUsedDate < multiStepLoginContinuationWindowMs;
-+          Date.now() - lastUsedDate < multiStepLoginContinuationWindowMs;
- 
-         if (lastUsedCipher && lastUsedRecently) {
-           cipher = lastUsedCipher;
++
+     it("cycles past the reprompt cipher and abandons the fill when a command surfaces a reprompt", async () => {
+       const pd = pageDetail(1, 0);
+       autofillService.collectPageDetailsFromTab$.mockReturnValue(of([pd]));

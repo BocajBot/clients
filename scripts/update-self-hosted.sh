@@ -20,6 +20,7 @@ ARTIFACT_DIR="${ARTIFACT_DIR:-}"
 INSTALL_DEPS="${INSTALL_DEPS:-0}"
 PUSH="${PUSH:-0}"
 KEEP_WORKTREE="${KEEP_WORKTREE:-0}"
+VERIFY_ONLY="${VERIFY_ONLY:-0}"
 
 fail() {
   printf 'error: %s\n' "$*" >&2
@@ -96,6 +97,12 @@ while IFS='|' read -r patch_path commit_message; do
   apply_patch "$patch_path" "$commit_message"
 done < "$PATCH_SERIES"
 
+# Check patch compatibility without installing dependencies or advancing any branch.
+if [[ "$VERIFY_ONLY" == "1" ]]; then
+  printf 'Patch series applies cleanly to %s.\n' "$BASE_REF"
+  exit 0
+fi
+
 cd "$WORKTREE"
 if [[ "$INSTALL_DEPS" == "1" ]]; then
   npm ci
@@ -104,6 +111,7 @@ fi
 if [[ "$RUN_TESTS" == "1" ]]; then
   npm test -- --runInBand \
     apps/browser/src/autofill/services/autofill.service.spec.ts \
+    apps/browser/src/autofill/background/autofill-orchestrator.spec.ts \
     apps/browser/src/vault/popup/services/vault-popup-items.service.spec.ts
 fi
 

@@ -7,6 +7,14 @@ on:
     # Every Monday at 09:23 UTC.
     - cron: "23 9 * * 1"
 
+  pull_request:
+    branches:
+      - automation
+    paths:
+      - "patches/**"
+      - "scripts/**"
+      - ".github/workflows/update-self-hosted.yml"
+
   push:
     branches:
       - automation
@@ -23,8 +31,75 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verify-patches:
+    name: Verify all custom patches against upstream
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out proposed automation changes
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure Bitwarden upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          git remote add upstream https://github.com/bitwarden/clients.git
+          git fetch --no-tags upstream main
+
+      - name: Validate patch file format
+        run: ./scripts/verify-patches.sh
+
+      - name: Verify full patch series applies cleanly
+        shell: bash
+        run: |
+          set -euo pipefail
+          UPSTREAM_REMOTE=upstream \
+          UPSTREAM_BRANCH=main \
+          VERIFY_ONLY=1 \
+          ./scripts/update-self-hosted.sh
+
+      - name: Set up Node.js for PR validation
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Use supported npm version
+        run: npm install --global npm@11
+
+      - name: Run patch tests and build Chrome ZIP without publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/artifacts"
+          UPSTREAM_REMOTE=upstream \
+          UPSTREAM_BRANCH=main \
+          INSTALL_DEPS=1 \
+          RUN_TESTS=1 \
+          BUILD_CHROME=0 \
+          PACKAGE_CHROME=1 \
+          ARTIFACT_DIR="$GITHUB_WORKSPACE/artifacts" \
+          PUSH=0 \
+          ./scripts/update-self-hosted.sh
+
+      - name: Upload uncommitted PR build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: self-hosted-chrome-pr-${{ github.event.pull_request.number }}
+          path: artifacts/*.zip
+          retention-days: 3
+          if-no-files-found: error
+
   rebuild:
     name: Build and publish Chrome extension
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -96,6 +171,16 @@ jobs:
           echo "Reason: $reason"
           echo "Upstream: $upstream_sha"
           echo "Current base: ${current_base:-none}"
+
+      - name: Verify patch series against current upstream
+        if: steps.check.outputs.rebuild == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          UPSTREAM_REMOTE=upstream \
+          UPSTREAM_BRANCH=main \
+          VERIFY_ONLY=1 \
+          ./scripts/update-self-hosted.sh
 
       - name: Set up Node.js
         if: steps.check.outputs.rebuild == 'true'
