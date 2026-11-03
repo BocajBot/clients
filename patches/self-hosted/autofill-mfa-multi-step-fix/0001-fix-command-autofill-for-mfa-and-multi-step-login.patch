@@ -155,7 +155,7 @@ index 73abe73119d042128cf1cc16d2761e0c1321fbf0..10ed08321c9c0ad1d6a0d3dfdcaae005
        }
        return true;
 diff --git a/apps/browser/src/autofill/services/autofill.service.ts b/apps/browser/src/autofill/services/autofill.service.ts
-index 3d9743f9e51c5a6b97f462a85b351d946b6eef14..8a117799d03aa024046b87b49a53eec0b9b922cf 100644
+index 3d9743f9e51c5a6b97f462a85b351d946b6eef14..936519531863b5d9870a8c3f914ee6f11dd69f9d 100644
 --- a/apps/browser/src/autofill/services/autofill.service.ts
 +++ b/apps/browser/src/autofill/services/autofill.service.ts
 @@ -980,6 +980,7 @@
@@ -184,40 +184,34 @@ index 3d9743f9e51c5a6b97f462a85b351d946b6eef14..8a117799d03aa024046b87b49a53eec0
            ["number", "tel", "text"].some((t) => t === field.type) &&
            !fieldContainsKeyword(field, [...AutoFillConstants.RecoveryCodeFieldNames]);
  
-@@ -1223,25 +1224,24 @@
+@@ -1223,11 +1224,22 @@
            maybeUsernameField &&
            fieldContainsKeyword(field, AutoFillConstants.UnambiguousUsernameFieldNames);
  
 -        // Classify by signal strength: reliable TOTP, then unambiguous username, then a whole-token
 -        // TOTP abbreviation (e.g. name="2fa"), then ambiguous username (e.g. "login"), then
 -        // ambiguous TOTP.
-+        // When this login has a TOTP seed, code-like fields take precedence over
-+        // ambiguous username signals on password-free MFA steps.
-         switch (true) {
-           case isTotpField:
+-        switch (true) {
+-          case isTotpField:
++        // A field explicitly labeled and identified as an MFA code overrides even a
++        // misleading "username" name. Substrings alone do not: upstream's unambiguous
++        // username and whole-token TOTP precedence remains intact.
++        const hasExplicitCodeLabel =
++          hasLoginTotp &&
++          AutoFillConstants.AmbiguousTotpFieldNames.some((keyword) => {
++            const name = keyword.toLowerCase();
++            return (
++              field.htmlID?.trim().toLowerCase() === name &&
++              field["label-left"]?.trim().toLowerCase() === name
++            );
++          });
++
++        switch (true) {
++          case isTotpField:
++          case hasExplicitCodeLabel:
              totps.push(field);
              return;
--          case isUsernameField:
--            usernames.set(field.opid, field);
--            return;
-           case isAbbreviatedTotpField:
-             totps.push(field);
-             return;
--          case maybeUsernameField:
--            usernames.set(field.opid, field);
--            return;
-           case maybeTotpField:
-             totps.push(field);
-             return;
-+          case isUsernameField:
-+            usernames.set(field.opid, field);
-+            return;
-+          case maybeUsernameField:
-+            usernames.set(field.opid, field);
-+            return;
-           default:
-             return;
-         }
+           case isUsernameField:
 diff --git a/apps/browser/src/autofill/services/autofill.service.spec.ts b/apps/browser/src/autofill/services/autofill.service.spec.ts
 index 4770d23b2c8eec5df988abfc5fb04889e9c60086..26398d67436b746349f59add7e7cc45fa3936abc 100644
 --- a/apps/browser/src/autofill/services/autofill.service.spec.ts
