@@ -1,125 +1,181 @@
-diff --git a/apps/browser/src/autofill/services/autofill.service.spec.ts b/apps/browser/src/autofill/services/autofill.service.spec.ts
-index ede1652318fa158cd0b903b96863d7636e349b3c..b5be10246fc173073c6eb10b696607167349d165 100644
---- a/apps/browser/src/autofill/services/autofill.service.spec.ts
-+++ b/apps/browser/src/autofill/services/autofill.service.spec.ts
-@@ -3119,10 +3119,11 @@ describe("AutofillService", () => {
-           expect(AutofillService.fillByOpid).toHaveBeenCalledWith(fillScript, totpField, totpCode);
-         });
+diff --git a/apps/browser/src/autofill/background/autofill-orchestrator.ts b/apps/browser/src/autofill/background/autofill-orchestrator.ts
+index 73abe73119d042128cf1cc16d2761e0c1321fbf0..10ed08321c9c0ad1d6a0d3dfdcaae00591382c11 100644
+--- a/apps/browser/src/autofill/background/autofill-orchestrator.ts
++++ b/apps/browser/src/autofill/background/autofill-orchestrator.ts
+@@ -26,6 +26,8 @@
+ import { CipherView } from "@bitwarden/common/vault/models/view/cipher.view";
  
--        it("classifies a field matching AmbiguousTotpFieldNames as username when it also matches username signals", async () => {
-+        it("classifies a field matching AmbiguousTotpFieldNames as TOTP when command TOTP autofill is available, even when it also matches username signals", async () => {
-+          const totpCode = "123456";
-           options.allowTotpAutofill = true;
--          // Simulates a username field whose label-left was contaminated with an
--          // ambiguous TOTP keyword.
-+          totpService.getCode$.mockReturnValue(of({ code: totpCode, period: 30 }));
-+
-           const ambiguousField = createAutofillFieldMock({
-             opid: "ambiguous-totp",
-             type: "text",
-@@ -3143,6 +3144,11 @@ describe("AutofillService", () => {
+ import { BrowserApi } from "../../platform/browser/browser-api";
++import { AutoFillConstants } from "../services/autofill-constants";
++import { fieldContainsKeyword, isNonLoginUsernameField } from "../utils/qualification";
+ import { AutofillOutcome } from "../enums/autofill-outcome.enum";
+ import {
+   AutofillLifecycleService,
+@@ -96,6 +98,9 @@
+  */
+ export const LOGIN_LAST_LAUNCHED_WINDOW_MS = 30000;
  
-           expect(AutofillService.fillByOpid).toHaveBeenCalledTimes(1);
-           expect(AutofillService.fillByOpid).toHaveBeenCalledWith(
-+            fillScript,
-+            ambiguousField,
-+            totpCode,
-+          );
-+          expect(AutofillService.fillByOpid).not.toHaveBeenCalledWith(
-             fillScript,
-             ambiguousField,
-             options.cipher.login.username,
-diff --git a/apps/browser/src/autofill/services/autofill.service.ts b/apps/browser/src/autofill/services/autofill.service.ts
-index e02eadeea637f94446cfa565914c27743b5f269d..e486ae409ca2ddcd9e17e76744b66bc8185b0547 100644
---- a/apps/browser/src/autofill/services/autofill.service.ts
-+++ b/apps/browser/src/autofill/services/autofill.service.ts
-@@ -622,8 +622,49 @@ export default class AutofillService implements AutofillServiceInterface {
-       return { didAutofill: false };
-     }
-     const tabUrl = tab.url;
-+    let continuingMultiStepLogin = false;
++/** Maximum age of the most recently used cipher for password-only multi-step continuation. */
++export const MULTI_STEP_LOGIN_CONTINUATION_WINDOW_MS = 2 * 60 * 1000;
 +
-     if (fromCommand) {
--      cipher = await this.cipherService.getNextCipherForUrl(tabUrl, activeUserId);
-+      const multiStepLoginContinuationWindowMs = 2 * 60 * 1000;
-+
-+      const pageHasPasswordField = pageDetails.some(
-+        (pd) =>
-+          AutofillService.loadPasswordFields(pd.details, false, false, false, true, undefined)
-+            .length > 0,
-+      );
-+
-+      const pageHasViewableUsernameField = pageDetails.some((pd) =>
-+        pd.details.fields.some(
-+          (field) =>
-+            field.viewable &&
-+            ["email", "tel", "text"].some((type) => type === field.type) &&
-+            fieldContainsKeyword(field, AutoFillConstants.UsernameFieldNames) &&
-+            !isNonLoginUsernameField(field, pd.details),
-+        ),
-+      );
-+
-+      const pageLooksLikePasswordStep = pageHasPasswordField && !pageHasViewableUsernameField;
-+
-+      if (pageLooksLikePasswordStep) {
-+        const lastUsedCipher = await this.cipherService.getLastUsedForUrl(
-+          tabUrl,
-+          activeUserId,
-+          true,
-+        );
-+        const lastUsedDate = lastUsedCipher?.localData?.lastUsedDate;
-+        const lastUsedRecently =
-+          typeof lastUsedDate === "number" &&
-+          Date.now().valueOf() - lastUsedDate < multiStepLoginContinuationWindowMs;
-+
-+        if (lastUsedCipher && lastUsedRecently) {
-+          cipher = lastUsedCipher;
-+          continuingMultiStepLogin = true;
-+        } else {
-+          cipher = await this.cipherService.getNextCipherForUrl(tabUrl, activeUserId);
-+        }
-+      } else {
-+        cipher = await this.cipherService.getNextCipherForUrl(tabUrl, activeUserId);
-+      }
-     } else {
-       const lastLaunchedCipher = await this.cipherService.getLastLaunchedForUrl(
-         tabUrl,
-@@ -647,7 +688,7 @@ export default class AutofillService implements AutofillServiceInterface {
-     }
+ /** Why `selectLogin` chooses a cipher, and whether the page-load cipher filter applies. */
+ const FillReason = Object.freeze({
+   /** Keyboard shortcut or login cipher-type fill. Next cipher in the URL rotation. */
+@@ -116,6 +121,7 @@
+   cipher: CipherView;
+   cycleKey: string;
+   options: Partial<AutoFillOptions>;
++  continuingMultiStepLogin?: boolean;
+ }
  
-     if (await this.isPasswordRepromptRequired(cipher, tab)) {
--      if (fromCommand) {
-+      if (fromCommand && !continuingMultiStepLogin) {
-         this.cipherService.updateLastUsedIndexForUrl(tabUrl);
+ /**
+@@ -357,19 +363,24 @@
+         return;
        }
  
-@@ -668,7 +709,7 @@ export default class AutofillService implements AutofillServiceInterface {
-     });
+-      const [pageDetails, plan] = await Promise.all([
+-        this.read(target, request.frameId),
+-        this.selectFill(request, target),
+-      ]);
+-      if (
+-        pageDetails.length == 0 ||
+-        plan == null ||
+-        !this.reportedFrameIsFresh(request, pageDetails)
+-      ) {
++      const pageDetails = await this.read(target, request.frameId);
++      if (pageDetails.length === 0 || !this.reportedFrameIsFresh(request, pageDetails)) {
++        return;
++      }
++      const plan = await this.selectFill(request, target, pageDetails);
++      if (plan == null) {
+         return;
+       }
+       const fromCommand = request.kind !== "pageLoad";
+-      if (await this.resolveReprompt(plan.cipher, target, fromCommand, plan.cycleKey)) {
++      if (
++        await this.resolveReprompt(
++          plan.cipher,
++          target,
++          fromCommand,
++          plan.cycleKey,
++          plan.continuingMultiStepLogin === true,
++        )
++      ) {
+         return;
+       }
  
-     // Update last used index as autofill has succeeded
--    if (fromCommand && result.didAutofill) {
-+    if (fromCommand && result.didAutofill && !continuingMultiStepLogin) {
-       this.cipherService.updateLastUsedIndexForUrl(tabUrl);
+@@ -382,7 +393,7 @@
+ 
+       // A commanded fill cycles the rotation so its next invocation offers the next cipher;
+       // a page-load fill uses last-used/last-launched selection and leaves the rotation alone.
+-      if (fromCommand && result.outcome === AutofillOutcome.Filled) {
++      if (fromCommand && result.outcome === AutofillOutcome.Filled && !plan.continuingMultiStepLogin) {
+         this.cycleFillableCipher(plan.cycleKey);
+       }
+ 
+@@ -447,6 +458,7 @@
+   private async selectFill(
+     request: FillRequest,
+     target: chrome.tabs.Tab,
++    pageDetails: PageDetail[],
+   ): Promise<PlannedFill | undefined> {
+     const activeUserId = await this.activeUserId();
+     if (activeUserId == null || !target.url) {
+@@ -474,12 +486,32 @@
      }
  
-@@ -1151,6 +1192,7 @@ export default class AutofillService implements AutofillServiceInterface {
+     const reason = request.kind === "pageLoad" ? FillReason.automatic : FillReason.userCommand;
+-    const cipher = await this.selectLogin(target.url, activeUserId, reason);
++    let cipher: CipherView | undefined;
++    let continuingMultiStepLogin = false;
++
++    // A password-only second step reuses the recently filled login instead of rotating
++    // to another account. Only user-initiated login commands can take this path.
++    if (request.kind === "command" && this.isPasswordOnlyLoginStep(pageDetails)) {
++      const recentCipher = await this.cipherService.getLastUsedForUrl(
++        target.url,
++        activeUserId,
++        true,
++      );
++      const lastUsed = recentCipher?.localData?.lastUsedDate;
++      const elapsed = typeof lastUsed === "number" ? this.now() - lastUsed : Infinity;
++      if (recentCipher && elapsed >= 0 && elapsed < MULTI_STEP_LOGIN_CONTINUATION_WINDOW_MS) {
++        cipher = recentCipher;
++        continuingMultiStepLogin = true;
++      }
++    }
++
++    cipher ??= await this.selectLogin(target.url, activeUserId, reason);
+     if (cipher == null) {
+       return undefined;
+     }
+     return {
+       cipher,
++      continuingMultiStepLogin,
+       cycleKey: target.url,
+       options: {
+         skipLastUsed: !fromCommand,
+@@ -492,6 +524,23 @@
+     };
+   }
+ 
++  /** A visible password field without a visible username field denotes a password-only step. */
++  private isPasswordOnlyLoginStep(pageDetails: PageDetail[]): boolean {
++    const hasPassword = pageDetails.some(({ details }) =>
++      details.fields.some((field) => field.viewable && field.type === "password"),
++    );
++    const hasUsername = pageDetails.some(({ details }) =>
++      details.fields.some(
++        (field) =>
++          field.viewable &&
++          ["email", "tel", "text"].includes(field.type) &&
++          fieldContainsKeyword(field, AutoFillConstants.UsernameFieldNames) &&
++          !isNonLoginUsernameField(field, details),
++      ),
++    );
++    return hasPassword && !hasUsername;
++  }
++
+   /**
+    * Selects the login cipher for a URL. `userCommand` takes the next cipher in the URL's rotation.
+    * `policyCommand` and `automatic` prefer a cipher launched within the last
+@@ -548,12 +597,13 @@
+     target: chrome.tabs.Tab,
+     fromCommand: boolean,
+     cycleKey: string,
++    continuingMultiStepLogin = false,
+   ): Promise<boolean> {
+     if (cipher.reprompt === CipherRepromptType.Password && !fromCommand) {
+       return true;
+     }
+     if (await this.autofillService.isPasswordRepromptRequired(cipher, target)) {
+-      if (fromCommand) {
++      if (fromCommand && !continuingMultiStepLogin) {
+         this.cycleFillableCipher(cycleKey);
+       }
+       return true;
+diff --git a/apps/browser/src/autofill/services/autofill.service.ts b/apps/browser/src/autofill/services/autofill.service.ts
+index 3d9743f9e51c5a6b97f462a85b351d946b6eef14..8a117799d03aa024046b87b49a53eec0b9b922cf 100644
+--- a/apps/browser/src/autofill/services/autofill.service.ts
++++ b/apps/browser/src/autofill/services/autofill.service.ts
+@@ -980,6 +980,7 @@
      let totp: AutofillField | null = null;
      const login = options.cipher.login;
      const totpToFill = options.allowTotpAutofill && options.canAccessTotp ? login?.totp : undefined;
 +    const hasLoginTotp = typeof totpToFill === "string" && totpToFill.length > 0;
-     const loginURIs = login?.uris ?? [];
-     fillScript.savedUrls = loginURIs.reduce<string[]>((acc, savedURI) => {
-       if (savedURI.match != UriMatchStrategy.Never && savedURI.uri != null) {
-@@ -1274,7 +1316,7 @@ export default class AutofillService implements AutofillServiceInterface {
+     fillScript.requiresInsecurePageConfirmation = await this.requiresInsecurePageConfirmation(
+       pageDetails.url,
+       options,
+@@ -1172,7 +1173,7 @@
+           }
          }
-       }
  
--      if (totpToFill) {
-+      if (hasLoginTotp) {
-         totp =
-           isFocusedTotpField && passwordMatchesFocused(passField)
-             ? focusedField
-@@ -1350,7 +1392,7 @@ export default class AutofillService implements AutofillServiceInterface {
+-        if (totpToFill && firstPasswordField.elementNumber > 0) {
++        if (hasLoginTotp && firstPasswordField.elementNumber > 0) {
+           totp =
+             isFocusedTotpField && passwordMatchesFocused(firstPasswordField)
+               ? focusedField
+@@ -1193,7 +1194,7 @@
          }
  
          const isTotpCandidate =
@@ -128,20 +184,26 @@ index e02eadeea637f94446cfa565914c27743b5f269d..e486ae409ca2ddcd9e17e76744b66bc8
            ["number", "tel", "text"].some((t) => t === field.type) &&
            !fieldContainsKeyword(field, [...AutoFillConstants.RecoveryCodeFieldNames]);
  
-@@ -1368,17 +1410,20 @@ export default class AutofillService implements AutofillServiceInterface {
-           fieldContainsKeyword(field, AutoFillConstants.UsernameFieldNames) &&
-           !isNonLoginUsernameField(field, pageDetails);
+@@ -1223,25 +1224,24 @@
+           maybeUsernameField &&
+           fieldContainsKeyword(field, AutoFillConstants.UnambiguousUsernameFieldNames);
  
--        // Reliable TOTP signals win unconditionally; username wins over ambiguous TOTP signals.
-+        // When command-triggered TOTP autofill is available, code-like fields should win
-+        // over username-only fill on no-password pages. This avoids filling usernames into
-+        // MFA/security-code fields whose attributes contain broad username words like
-+        // "login" or "user".
+-        // Classify by signal strength: reliable TOTP, then unambiguous username, then a whole-token
+-        // TOTP abbreviation (e.g. name="2fa"), then ambiguous username (e.g. "login"), then
+-        // ambiguous TOTP.
++        // When this login has a TOTP seed, code-like fields take precedence over
++        // ambiguous username signals on password-free MFA steps.
          switch (true) {
            case isTotpField:
              totps.push(field);
              return;
 -          case isUsernameField:
+-            usernames.set(field.opid, field);
+-            return;
+           case isAbbreviatedTotpField:
+             totps.push(field);
+             return;
+-          case maybeUsernameField:
 -            usernames.set(field.opid, field);
 -            return;
            case maybeTotpField:
@@ -150,6 +212,37 @@ index e02eadeea637f94446cfa565914c27743b5f269d..e486ae409ca2ddcd9e17e76744b66bc8
 +          case isUsernameField:
 +            usernames.set(field.opid, field);
 +            return;
++          case maybeUsernameField:
++            usernames.set(field.opid, field);
++            return;
            default:
              return;
          }
+diff --git a/apps/browser/src/autofill/services/autofill.service.spec.ts b/apps/browser/src/autofill/services/autofill.service.spec.ts
+index 4770d23b2c8eec5df988abfc5fb04889e9c60086..26398d67436b746349f59add7e7cc45fa3936abc 100644
+--- a/apps/browser/src/autofill/services/autofill.service.spec.ts
++++ b/apps/browser/src/autofill/services/autofill.service.spec.ts
+@@ -2684,10 +2684,10 @@
+           expect(AutofillService.fillByOpid).toHaveBeenCalledWith(fillScript, totpField, totpCode);
+         });
+ 
+-        it("classifies a field matching AmbiguousTotpFieldNames as username when it also matches username signals", async () => {
+-          options.allowTotpAutofill = true;
+-          // Simulates a username field whose label-left was contaminated with an
+-          // ambiguous TOTP keyword.
++        it("fills TOTP when ambiguous code and username signals overlap and TOTP is available", async () => {
++          const totpCode = "123456";
++          options.allowTotpAutofill = true;
++          totpService.getCode$.mockReturnValue(of({ code: totpCode, period: 30 }));
+           const ambiguousField = createAutofillFieldMock({
+             opid: "ambiguous-totp",
+             type: "text",
+@@ -2710,7 +2710,7 @@
+           expect(AutofillService.fillByOpid).toHaveBeenCalledWith(
+             fillScript,
+             ambiguousField,
+-            options.cipher.login.username,
++            totpCode,
+           );
+         });
+ 
