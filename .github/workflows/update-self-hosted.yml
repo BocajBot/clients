@@ -97,6 +97,16 @@ jobs:
           echo "Upstream: $upstream_sha"
           echo "Current base: ${current_base:-none}"
 
+      - name: Verify patch series against current upstream
+        if: steps.check.outputs.rebuild == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          UPSTREAM_REMOTE=upstream \
+          UPSTREAM_BRANCH=main \
+          VERIFY_ONLY=1 \
+          ./scripts/update-self-hosted.sh
+
       - name: Set up Node.js
         if: steps.check.outputs.rebuild == 'true'
         uses: actions/setup-node@v4
