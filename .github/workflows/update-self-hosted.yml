@@ -65,6 +65,38 @@ jobs:
           VERIFY_ONLY=1 \
           ./scripts/update-self-hosted.sh
 
+      - name: Set up Node.js for PR validation
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Use supported npm version
+        run: npm install --global npm@11
+
+      - name: Run patch tests and build Chrome ZIP without publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/artifacts"
+          UPSTREAM_REMOTE=upstream \
+          UPSTREAM_BRANCH=main \
+          INSTALL_DEPS=1 \
+          RUN_TESTS=1 \
+          BUILD_CHROME=0 \
+          PACKAGE_CHROME=1 \
+          ARTIFACT_DIR="$GITHUB_WORKSPACE/artifacts" \
+          PUSH=0 \
+          ./scripts/update-self-hosted.sh
+
+      - name: Upload uncommitted PR build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: self-hosted-chrome-pr-${{ github.event.pull_request.number }}
+          path: artifacts/*.zip
+          retention-days: 3
+          if-no-files-found: error
+
   rebuild:
     name: Build and publish Chrome extension
     if: github.event_name != 'pull_request'
