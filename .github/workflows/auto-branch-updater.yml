@@ -17,6 +17,8 @@ on:
 
 jobs:
   update:
+    # This workflow maintains Bitwarden-owned eu-web-* branches, which forks do not have.
+    if: github.repository == 'bitwarden/clients'
     name: Update Branch
     runs-on: ubuntu-22.04
     env:
