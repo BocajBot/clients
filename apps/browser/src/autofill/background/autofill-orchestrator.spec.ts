@@ -601,6 +601,102 @@ describe("DefaultAutofillOrchestrator", () => {
       expect(updateOverlayCiphers).toHaveBeenCalledTimes(1);
     });
 
+    describe("password-only multi-step login continuation", () => {
+      const passwordOnlyPage = (): PageDetail => {
+        const pd = pageDetail(1, 0);
+        pd.details.fields = [createAutofillFieldMock({
+          opid: "password-step", type: "password", htmlName: "password", form: "validFormId",
+        })];
+        return pd;
+      };
+
+      it("reuses a recent login without advancing rotation", async () => {
+        const pd = passwordOnlyPage();
+        const recentCipher = makeCipher(CipherType.Login, {
+          id: "recent", localData: { lastUsedDate: NOW - 1000 },
+        });
+        cipherService.getLastUsedForUrl.mockResolvedValue(recentCipher);
+        autofillService.collectPageDetailsFromTab$.mockReturnValue(of([pd]));
+        autofillService.doAutoFill.mockResolvedValue({ outcome: AutofillOutcome.Filled });
+
+        autofillOrchestrator.autofillActiveTabFromCommand(pd.tab);
+        await flushPromises();
+
+        expect(cipherService.getLastUsedForUrl).toHaveBeenCalledWith(DEFAULT_URL, "user-1", true);
+        expect(cipherService.getNextCipherForUrl).not.toHaveBeenCalled();
+        expect(autofillService.doAutoFill).toHaveBeenCalledWith(
+          expect.objectContaining({ cipher: recentCipher }),
+        );
+        expect(cipherService.updateLastUsedIndexForUrl).not.toHaveBeenCalled();
+      });
+
+      it("rotates when the previous login is older than two minutes", async () => {
+        const pd = passwordOnlyPage();
+        cipherService.getLastUsedForUrl.mockResolvedValue(makeCipher(CipherType.Login, {
+          id: "old", localData: { lastUsedDate: NOW - 120001 },
+        }));
+        const next = makeCipher(CipherType.Login, { id: "next" });
+        cipherService.getNextCipherForUrl.mockResolvedValue(next);
+        autofillService.collectPageDetailsFromTab$.mockReturnValue(of([pd]));
+        autofillService.doAutoFill.mockResolvedValue({ outcome: AutofillOutcome.Filled });
+
+        autofillOrchestrator.autofillActiveTabFromCommand(pd.tab);
+        await flushPromises();
+
+        expect(cipherService.getNextCipherForUrl).toHaveBeenCalledWith(DEFAULT_URL, "user-1");
+        expect(autofillService.doAutoFill).toHaveBeenCalledWith(
+          expect.objectContaining({ cipher: next }),
+        );
+        expect(cipherService.updateLastUsedIndexForUrl).toHaveBeenCalledWith(DEFAULT_URL);
+      });
+
+      it("rotates when there is no previous login", async () => {
+        const pd = passwordOnlyPage();
+        cipherService.getLastUsedForUrl.mockResolvedValue(undefined as unknown as CipherView);
+        autofillService.collectPageDetailsFromTab$.mockReturnValue(of([pd]));
+        autofillService.doAutoFill.mockResolvedValue({ outcome: AutofillOutcome.Filled });
+
+        autofillOrchestrator.autofillActiveTabFromCommand(pd.tab);
+        await flushPromises();
+
+        expect(cipherService.getNextCipherForUrl).toHaveBeenCalledWith(DEFAULT_URL, "user-1");
+        expect(cipherService.updateLastUsedIndexForUrl).toHaveBeenCalledWith(DEFAULT_URL);
+      });
+
+      it("rotates normally if a visible username field is still present", async () => {
+        const pd = passwordOnlyPage();
+        pd.details.fields.push(createAutofillFieldMock({
+          opid: "username-step", type: "text", htmlName: "username", form: "validFormId",
+        }));
+        autofillService.collectPageDetailsFromTab$.mockReturnValue(of([pd]));
+        autofillService.doAutoFill.mockResolvedValue({ outcome: AutofillOutcome.Filled });
+
+        autofillOrchestrator.autofillActiveTabFromCommand(pd.tab);
+        await flushPromises();
+
+        expect(cipherService.getLastUsedForUrl).not.toHaveBeenCalled();
+        expect(cipherService.getNextCipherForUrl).toHaveBeenCalledWith(DEFAULT_URL, "user-1");
+        expect(cipherService.updateLastUsedIndexForUrl).toHaveBeenCalledWith(DEFAULT_URL);
+      });
+
+      it("honors reprompt without rotating the continuation", async () => {
+        const pd = passwordOnlyPage();
+        const recent = makeCipher(CipherType.Login, {
+          id: "protected", localData: { lastUsedDate: NOW - 1000 },
+        });
+        cipherService.getLastUsedForUrl.mockResolvedValue(recent);
+        autofillService.isPasswordRepromptRequired.mockResolvedValue(true);
+        autofillService.collectPageDetailsFromTab$.mockReturnValue(of([pd]));
+
+        autofillOrchestrator.autofillActiveTabFromCommand(pd.tab);
+        await flushPromises();
+
+        expect(autofillService.isPasswordRepromptRequired).toHaveBeenCalledWith(recent, pd.tab);
+        expect(autofillService.doAutoFill).not.toHaveBeenCalled();
+        expect(cipherService.updateLastUsedIndexForUrl).not.toHaveBeenCalled();
+      });
+    });
+
     it("cycles past the reprompt cipher and abandons the fill when a command surfaces a reprompt", async () => {
       const pd = pageDetail(1, 0);
       autofillService.collectPageDetailsFromTab$.mockReturnValue(of([pd]));
