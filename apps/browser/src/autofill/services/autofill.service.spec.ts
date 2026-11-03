@@ -2684,10 +2684,10 @@ describe("AutofillService", () => {
           expect(AutofillService.fillByOpid).toHaveBeenCalledWith(fillScript, totpField, totpCode);
         });
 
-        it("classifies a field matching AmbiguousTotpFieldNames as username when it also matches username signals", async () => {
+        it("fills TOTP when ambiguous code and username signals overlap and TOTP is available", async () => {
+          const totpCode = "123456";
           options.allowTotpAutofill = true;
-          // Simulates a username field whose label-left was contaminated with an
-          // ambiguous TOTP keyword.
+          totpService.getCode$.mockReturnValue(of({ code: totpCode, period: 30 }));
           const ambiguousField = createAutofillFieldMock({
             opid: "ambiguous-totp",
             type: "text",
@@ -2710,7 +2710,7 @@ describe("AutofillService", () => {
           expect(AutofillService.fillByOpid).toHaveBeenCalledWith(
             fillScript,
             ambiguousField,
-            options.cipher.login.username,
+            totpCode,
           );
         });
 

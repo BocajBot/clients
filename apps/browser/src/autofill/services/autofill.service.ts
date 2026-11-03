@@ -980,6 +980,7 @@ export default class AutofillService implements AutofillServiceInterface {
     let totp: AutofillField | null = null;
     const login = options.cipher.login;
     const totpToFill = options.allowTotpAutofill && options.canAccessTotp ? login?.totp : undefined;
+    const hasLoginTotp = typeof totpToFill === "string" && totpToFill.length > 0;
     fillScript.requiresInsecurePageConfirmation = await this.requiresInsecurePageConfirmation(
       pageDetails.url,
       options,
@@ -1172,7 +1173,7 @@ export default class AutofillService implements AutofillServiceInterface {
           }
         }
 
-        if (totpToFill && firstPasswordField.elementNumber > 0) {
+        if (hasLoginTotp && firstPasswordField.elementNumber > 0) {
           totp =
             isFocusedTotpField && passwordMatchesFocused(firstPasswordField)
               ? focusedField
@@ -1193,7 +1194,7 @@ export default class AutofillService implements AutofillServiceInterface {
         }
 
         const isTotpCandidate =
-          options.allowTotpAutofill &&
+          hasLoginTotp &&
           ["number", "tel", "text"].some((t) => t === field.type) &&
           !fieldContainsKeyword(field, [...AutoFillConstants.RecoveryCodeFieldNames]);
 
@@ -1223,11 +1224,22 @@ export default class AutofillService implements AutofillServiceInterface {
           maybeUsernameField &&
           fieldContainsKeyword(field, AutoFillConstants.UnambiguousUsernameFieldNames);
 
-        // Classify by signal strength: reliable TOTP, then unambiguous username, then a whole-token
-        // TOTP abbreviation (e.g. name="2fa"), then ambiguous username (e.g. "login"), then
-        // ambiguous TOTP.
+        // A field explicitly labeled and identified as an MFA code overrides even a
+        // misleading "username" name. Substrings alone do not: upstream's unambiguous
+        // username and whole-token TOTP precedence remains intact.
+        const hasExplicitCodeLabel =
+          hasLoginTotp &&
+          AutoFillConstants.AmbiguousTotpFieldNames.some((keyword) => {
+            const name = keyword.toLowerCase();
+            return (
+              field.htmlID?.trim().toLowerCase() === name &&
+              field["label-left"]?.trim().toLowerCase() === name
+            );
+          });
+
         switch (true) {
           case isTotpField:
+          case hasExplicitCodeLabel:
             totps.push(field);
             return;
           case isUsernameField:

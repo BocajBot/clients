@@ -26,6 +26,8 @@ import { CipherRepromptType } from "@bitwarden/common/vault/enums/cipher-repromp
 import { CipherView } from "@bitwarden/common/vault/models/view/cipher.view";
 
 import { BrowserApi } from "../../platform/browser/browser-api";
+import { AutoFillConstants } from "../services/autofill-constants";
+import { fieldContainsKeyword, isNonLoginUsernameField } from "../utils/qualification";
 import { AutofillOutcome } from "../enums/autofill-outcome.enum";
 import {
   AutofillLifecycleService,
@@ -96,6 +98,9 @@ export const COLLECT_SETTLE_MS = 50;
  */
 export const LOGIN_LAST_LAUNCHED_WINDOW_MS = 30000;
 
+/** Maximum age of the most recently used cipher for password-only multi-step continuation. */
+export const MULTI_STEP_LOGIN_CONTINUATION_WINDOW_MS = 2 * 60 * 1000;
+
 /** Why `selectLogin` chooses a cipher, and whether the page-load cipher filter applies. */
 const FillReason = Object.freeze({
   /** Keyboard shortcut or login cipher-type fill. Next cipher in the URL rotation. */
@@ -116,6 +121,7 @@ interface PlannedFill {
   cipher: CipherView;
   cycleKey: string;
   options: Partial<AutoFillOptions>;
+  continuingMultiStepLogin?: boolean;
 }
 
 /**
@@ -357,19 +363,24 @@ export class DefaultAutofillOrchestrator implements AutofillOrchestrator {
         return;
       }
 
-      const [pageDetails, plan] = await Promise.all([
-        this.read(target, request.frameId),
-        this.selectFill(request, target),
-      ]);
-      if (
-        pageDetails.length == 0 ||
-        plan == null ||
-        !this.reportedFrameIsFresh(request, pageDetails)
-      ) {
+      const pageDetails = await this.read(target, request.frameId);
+      if (pageDetails.length === 0 || !this.reportedFrameIsFresh(request, pageDetails)) {
+        return;
+      }
+      const plan = await this.selectFill(request, target, pageDetails);
+      if (plan == null) {
         return;
       }
       const fromCommand = request.kind !== "pageLoad";
-      if (await this.resolveReprompt(plan.cipher, target, fromCommand, plan.cycleKey)) {
+      if (
+        await this.resolveReprompt(
+          plan.cipher,
+          target,
+          fromCommand,
+          plan.cycleKey,
+          plan.continuingMultiStepLogin === true,
+        )
+      ) {
         return;
       }
 
@@ -382,7 +393,7 @@ export class DefaultAutofillOrchestrator implements AutofillOrchestrator {
 
       // A commanded fill cycles the rotation so its next invocation offers the next cipher;
       // a page-load fill uses last-used/last-launched selection and leaves the rotation alone.
-      if (fromCommand && result.outcome === AutofillOutcome.Filled) {
+      if (fromCommand && result.outcome === AutofillOutcome.Filled && !plan.continuingMultiStepLogin) {
         this.cycleFillableCipher(plan.cycleKey);
       }
 
@@ -447,6 +458,7 @@ export class DefaultAutofillOrchestrator implements AutofillOrchestrator {
   private async selectFill(
     request: FillRequest,
     target: chrome.tabs.Tab,
+    pageDetails: PageDetail[],
   ): Promise<PlannedFill | undefined> {
     const activeUserId = await this.activeUserId();
     if (activeUserId == null || !target.url) {
@@ -474,12 +486,32 @@ export class DefaultAutofillOrchestrator implements AutofillOrchestrator {
     }
 
     const reason = request.kind === "pageLoad" ? FillReason.automatic : FillReason.userCommand;
-    const cipher = await this.selectLogin(target.url, activeUserId, reason);
+    let cipher: CipherView | undefined;
+    let continuingMultiStepLogin = false;
+
+    // A password-only second step reuses the recently filled login instead of rotating
+    // to another account. Only user-initiated login commands can take this path.
+    if (request.kind === "command" && this.isPasswordOnlyLoginStep(pageDetails)) {
+      const recentCipher = await this.cipherService.getLastUsedForUrl(
+        target.url,
+        activeUserId,
+        true,
+      );
+      const lastUsed = recentCipher?.localData?.lastUsedDate;
+      const elapsed = typeof lastUsed === "number" ? this.now() - lastUsed : Infinity;
+      if (recentCipher && elapsed >= 0 && elapsed < MULTI_STEP_LOGIN_CONTINUATION_WINDOW_MS) {
+        cipher = recentCipher;
+        continuingMultiStepLogin = true;
+      }
+    }
+
+    cipher ??= await this.selectLogin(target.url, activeUserId, reason);
     if (cipher == null) {
       return undefined;
     }
     return {
       cipher,
+      continuingMultiStepLogin,
       cycleKey: target.url,
       options: {
         skipLastUsed: !fromCommand,
@@ -490,6 +522,23 @@ export class DefaultAutofillOrchestrator implements AutofillOrchestrator {
         allowTotpAutofill: fromCommand,
       },
     };
+  }
+
+  /** A visible password field without a visible username field denotes a password-only step. */
+  private isPasswordOnlyLoginStep(pageDetails: PageDetail[]): boolean {
+    const hasPassword = pageDetails.some(({ details }) =>
+      details.fields.some((field) => field.viewable && field.type === "password"),
+    );
+    const hasUsername = pageDetails.some(({ details }) =>
+      details.fields.some(
+        (field) =>
+          field.viewable &&
+          ["email", "tel", "text"].includes(field.type) &&
+          fieldContainsKeyword(field, AutoFillConstants.UsernameFieldNames) &&
+          !isNonLoginUsernameField(field, details),
+      ),
+    );
+    return hasPassword && !hasUsername;
   }
 
   /**
@@ -548,12 +597,13 @@ export class DefaultAutofillOrchestrator implements AutofillOrchestrator {
     target: chrome.tabs.Tab,
     fromCommand: boolean,
     cycleKey: string,
+    continuingMultiStepLogin = false,
   ): Promise<boolean> {
     if (cipher.reprompt === CipherRepromptType.Password && !fromCommand) {
       return true;
     }
     if (await this.autofillService.isPasswordRepromptRequired(cipher, target)) {
-      if (fromCommand) {
+      if (fromCommand && !continuingMultiStepLogin) {
         this.cycleFillableCipher(cycleKey);
       }
       return true;
