@@ -20,6 +20,7 @@ ARTIFACT_DIR="${ARTIFACT_DIR:-}"
 INSTALL_DEPS="${INSTALL_DEPS:-0}"
 PUSH="${PUSH:-0}"
 KEEP_WORKTREE="${KEEP_WORKTREE:-0}"
+VERIFY_ONLY="${VERIFY_ONLY:-0}"
 
 fail() {
   printf 'error: %s\n' "$*" >&2
@@ -95,6 +96,12 @@ while IFS='|' read -r patch_path commit_message; do
   [[ -n "$commit_message" ]] || fail "series entry lacks a commit message: $patch_path"
   apply_patch "$patch_path" "$commit_message"
 done < "$PATCH_SERIES"
+
+# Check patch compatibility without installing dependencies or advancing any branch.
+if [[ "$VERIFY_ONLY" == "1" ]]; then
+  printf 'Patch series applies cleanly to %s.\n' "$BASE_REF"
+  exit 0
+fi
 
 cd "$WORKTREE"
 if [[ "$INSTALL_DEPS" == "1" ]]; then
