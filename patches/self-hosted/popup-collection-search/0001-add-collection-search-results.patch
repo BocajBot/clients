@@ -130,10 +130,10 @@ index f4a9b76d51529d0e89849ae5d22fbe74480446c5..86d794c91ca459fe4e13e3be527192f9
                [title]="'searchResults' | i18n"
                [ciphers]="(filteredCiphers$ | async) || []"
 diff --git a/apps/browser/src/vault/popup/components/vault/vault.component.ts b/apps/browser/src/vault/popup/components/vault/vault.component.ts
-index d35e360d7f02112ddc51515657b45cba00dc2de9..e3f947075c861a7811c27fe3873c118c78066f25 100644
+index 663173214de6ee1daca1bae1e943e53d9e12817a..5cdaf878bb0cca2427b85d9390c1882d0eecdba0 100644
 --- a/apps/browser/src/vault/popup/components/vault/vault.component.ts
 +++ b/apps/browser/src/vault/popup/components/vault/vault.component.ts
-@@ -93,7 +93,11 @@ import { VaultHeaderComponent } from "./vault-header/vault-header.component";
+@@ -111,7 +111,11 @@ import { VaultHeaderComponent } from "./vault-header/vault-header.component";
  import { VaultPopupListTableComponent } from "./vault-popup-list-table/vault-popup-list-table.component";
  import { VaultSwitcherComponent } from "./vault-switcher/vault-switcher.component";
  
@@ -146,7 +146,7 @@ index d35e360d7f02112ddc51515657b45cba00dc2de9..e3f947075c861a7811c27fe3873c118c
  
  const VaultState = {
    Empty: 0,
-@@ -120,6 +124,7 @@ type VaultState = UnionOfValues<typeof VaultState>;
+@@ -142,6 +146,7 @@ const NEW_EXPERIENCE_DARK_IMG = "../../../../images/new-experience/new-experienc
      CommonModule,
      AutofillVaultListItemsComponent,
      VaultListItemsContainerComponent,
@@ -154,7 +154,7 @@ index d35e360d7f02112ddc51515657b45cba00dc2de9..e3f947075c861a7811c27fe3873c118c
      ButtonModule,
      NewItemDropdownComponent,
      AppVaultFabComponent,
-@@ -191,6 +196,13 @@ export class VaultComponent implements OnInit, OnDestroy {
+@@ -229,6 +234,13 @@ export class VaultComponent implements OnInit, OnDestroy {
     */
    protected cipherCount$ = this.vaultPopupListTableService.itemCount$;
  
@@ -169,10 +169,10 @@ index d35e360d7f02112ddc51515657b45cba00dc2de9..e3f947075c861a7811c27fe3873c118c
      this.activeUserId$.pipe(
        switchMap((userId) =>
 diff --git a/apps/browser/src/vault/popup/services/vault-popup-items.service.spec.ts b/apps/browser/src/vault/popup/services/vault-popup-items.service.spec.ts
-index c8e3aed5e0b09510dd16a4be8f47184864bdcb21..ad75f2f173effb75102464b23eb6e82b2853e67b 100644
+index a4ae8e8becd219454c01cb38f6b7fdf0a3f739c2..1dc8c93320decc8f2aad7d1e534b7cc7b0961607 100644
 --- a/apps/browser/src/vault/popup/services/vault-popup-items.service.spec.ts
 +++ b/apps/browser/src/vault/popup/services/vault-popup-items.service.spec.ts
-@@ -432,6 +432,15 @@ describe("VaultPopupItemsService", () => {
+@@ -498,6 +498,15 @@ describe("VaultPopupItemsService", () => {
          done();
        });
      });
@@ -188,7 +188,7 @@ index c8e3aed5e0b09510dd16a4be8f47184864bdcb21..ad75f2f173effb75102464b23eb6e82b
    });
  
    describe("deletedCiphers$", () => {
-@@ -614,6 +623,108 @@ describe("VaultPopupItemsService", () => {
+@@ -764,6 +773,108 @@ describe("VaultPopupItemsService", () => {
        expect(viewCacheService.mockSignal()).toBe("some search text");
      });
    });
@@ -235,7 +235,7 @@ index c8e3aed5e0b09510dd16a4be8f47184864bdcb21..ad75f2f173effb75102464b23eb6e82b
 +
 +    it("should return an empty array when a collection filter is already active", async () => {
 +      searchService.isSearchable.mockResolvedValue(true);
-+      (vaultPopupListFiltersServiceMock.filters$ as BehaviorSubject<any>).next({
++      filters$.next({
 +        organization: null,
 +        collection: mockCollections[0],
 +        cipherType: null,
@@ -258,7 +258,7 @@ index c8e3aed5e0b09510dd16a4be8f47184864bdcb21..ad75f2f173effb75102464b23eb6e82b
 +    });
 +
 +    it("should reset other filters, select the collection, and clear the search text", () => {
-+      const collectionOption = { value: mockCollections[0], children: [] };
++      const collectionOption = { value: mockCollections[0], children: [] as any[] };
 +      vaultPopupListFiltersServiceMock.collections$ = of([collectionOption]) as any;
 +      const applyFilterSpy = jest.spyOn(service, "applyFilter");
 +
@@ -274,7 +274,7 @@ index c8e3aed5e0b09510dd16a4be8f47184864bdcb21..ad75f2f173effb75102464b23eb6e82b
 +    });
 +
 +    it("should resolve a collection nested within a parent option", () => {
-+      const child = { value: mockCollections[1], children: [] };
++      const child = { value: mockCollections[1], children: [] as any[] };
 +      const parent = { value: mockCollections[0], children: [child] };
 +      vaultPopupListFiltersServiceMock.collections$ = of([parent]) as any;
 +
@@ -298,10 +298,10 @@ index c8e3aed5e0b09510dd16a4be8f47184864bdcb21..ad75f2f173effb75102464b23eb6e82b
  
  // A function to generate a list of ciphers of different types
 diff --git a/apps/browser/src/vault/popup/services/vault-popup-items.service.ts b/apps/browser/src/vault/popup/services/vault-popup-items.service.ts
-index a824eb8d7c65e4d5a19e8bba14ef6ed1d983f00b..2c6c914daaedb192aa00ae83bad57d5305d7e5ca 100644
+index c743ad1050b795bd20f9afb6d667594ac6181e3d..498fcddd2769e538159415e5d2213544333a07c6 100644
 --- a/apps/browser/src/vault/popup/services/vault-popup-items.service.ts
 +++ b/apps/browser/src/vault/popup/services/vault-popup-items.service.ts
-@@ -15,12 +15,14 @@
+@@ -15,12 +15,14 @@ import {
    startWith,
    Subject,
    switchMap,
@@ -316,15 +316,15 @@ index a824eb8d7c65e4d5a19e8bba14ef6ed1d983f00b..2c6c914daaedb192aa00ae83bad57d53
  import { Organization } from "@bitwarden/common/admin-console/models/domain/organization";
  import { AccountService } from "@bitwarden/common/auth/abstractions/account.service";
  import { getUserId } from "@bitwarden/common/auth/services/account.service";
-@@ -33,6 +35,7 @@
- import { VaultSettingsService } from "@bitwarden/common/vault/abstractions/vault-settings/vault-settings.service";
+@@ -35,6 +37,7 @@ import { VaultSettingsService } from "@bitwarden/common/vault/abstractions/vault
  import { CipherType } from "@bitwarden/common/vault/enums";
+ import { CipherView } from "@bitwarden/common/vault/models/view/cipher.view";
  import { RestrictedItemTypesService } from "@bitwarden/common/vault/services/restricted-item-types.service";
 +import { normalizeSearchQuery } from "@bitwarden/common/vault/services/search.service";
  import {
    CipherViewLike,
    CipherViewLikeUtils,
-@@ -81,6 +84,33 @@
+@@ -104,6 +107,33 @@ export class VaultPopupItemsService {
      switchMap((userId) => this.collectionService.decryptedCollections$(userId)),
    );
  
@@ -358,12 +358,12 @@ index a824eb8d7c65e4d5a19e8bba14ef6ed1d983f00b..2c6c914daaedb192aa00ae83bad57d53
    /**
     * Observable that contains the list of other cipher types that should be shown
     * in the autofill section of the Vault tab. Depends on vault settings.
-@@ -299,11 +329,12 @@
+@@ -326,11 +356,12 @@ export class VaultPopupItemsService {
    activeCiphers$: Observable<PopupCipherViewLike[]> = this._activeCipherList$;
  
    /**
 -   * Observable that indicates whether there are no ciphers to show with the current filter.
-+   * Observable that indicates whether there are no results to show with the current filter.
++   * Observable that indicates whether there are no matching ciphers or collections.
     */
 -  noFilteredResults$: Observable<boolean> = this._filteredCipherList$.pipe(
 -    map((ciphers) => !ciphers.length),
@@ -375,8 +375,8 @@ index a824eb8d7c65e4d5a19e8bba14ef6ed1d983f00b..2c6c914daaedb192aa00ae83bad57d53
  
    /**
     * Observable that indicates when the user should see the deactivated org state, i.e. when the
-@@ -386,6 +417,27 @@
-     this.cachedSearchText.set("");
+@@ -413,6 +444,27 @@ export class VaultPopupItemsService {
+       .subscribe(() => this.cachedSearchText.set(""));
    }
  
 +  /** Selects a collection filter from search results and clears the search text. */
@@ -400,6 +400,6 @@ index a824eb8d7c65e4d5a19e8bba14ef6ed1d983f00b..2c6c914daaedb192aa00ae83bad57d53
 +    });
 +  }
 +
+   /** Sets the legacy search text, which is held in the popup view cache. */
    applyFilter(newSearchText: string) {
      this.cachedSearchText.set(newSearchText);
-   }

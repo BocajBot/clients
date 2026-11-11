@@ -1,0 +1,432 @@
+diff --git a/apps/browser/src/vault/popup/components/vault/vault-popup-list-table/vault-popup-list-table.component.html b/apps/browser/src/vault/popup/components/vault/vault-popup-list-table/vault-popup-list-table.component.html
+index b17dadb83389b25765c48d95924940dbe8190c7f..3aebac33d990d22d6dd1d6c753553928f7efca6c 100644
+--- a/apps/browser/src/vault/popup/components/vault/vault-popup-list-table/vault-popup-list-table.component.html
++++ b/apps/browser/src/vault/popup/components/vault/vault-popup-list-table/vault-popup-list-table.component.html
+@@ -109,6 +109,13 @@
+         }
+       </bit-filter-menu>
+     }
++
++    <app-vault-search-collections
++      slot="below"
++      compact
++      [collections]="matchingCollections()"
++      (collectionSelected)="selectCollection($event)"
++    ></app-vault-search-collections>
+   </bit-table-toolbar>
+   <app-vault-filters-tour [toolbar]="toolbar" />
+   <!--
+diff --git a/apps/browser/src/vault/popup/components/vault/vault-popup-list-table/vault-popup-list-table.component.spec.ts b/apps/browser/src/vault/popup/components/vault/vault-popup-list-table/vault-popup-list-table.component.spec.ts
+index 86730164632be0e7f7e15f53cbd1b17797891146..ee1f9cd869f16b4daf9a345edcc98f3d1f78535e 100644
+--- a/apps/browser/src/vault/popup/components/vault/vault-popup-list-table/vault-popup-list-table.component.spec.ts
++++ b/apps/browser/src/vault/popup/components/vault/vault-popup-list-table/vault-popup-list-table.component.spec.ts
+@@ -141,8 +141,12 @@ describe("VaultPopupListTableComponent", () => {
+   /** Unsearched active ciphers; the folder chip's options come from here, not the rendered rows. */
+   const activeCiphers$ = new BehaviorSubject<PopupCipherViewLike[]>([]);
+ 
++  /** Collections whose names match the search text; the items service owns the matching. */
++  const filteredCollections$ = new BehaviorSubject<CollectionView[]>([]);
++
+   const vaultPopupItemsService = {
+     activeCiphers$: activeCiphers$.asObservable(),
++    filteredCollections$: filteredCollections$.asObservable(),
+     autoFillCiphers$: autoFillCiphers$.asObservable(),
+     favoriteCiphers$: favoriteCiphers$.asObservable(),
+     filteredCiphers$: filteredCiphers$.asObservable(),
+@@ -1209,6 +1213,75 @@ describe("VaultPopupListTableComponent", () => {
+       });
+     });
+ 
++    describe("collection search matches", () => {
++      const alpha = {
++        id: "col-1",
++        name: "Alpha",
++        organizationId: "org-1",
++      } as unknown as CollectionView;
++      const gamma = {
++        id: "col-3",
++        name: "Gamma",
++        organizationId: "org-2",
++      } as unknown as CollectionView;
++
++      const renderedMatches = (): string[] =>
++        Array.from(
++          fixture.nativeElement.querySelectorAll(
++            '[data-testid="collection-matches"] [data-testid="collection-name"]',
++          ) as NodeListOf<HTMLElement>,
++        ).map((el) => el.textContent?.trim() ?? "");
++
++      beforeEach(() => {
++        collections$.next([
++          { value: alpha, label: "Alpha" },
++          { value: gamma, label: "Gamma" },
++        ]);
++        listTableSvc.setScope(null);
++      });
++
++      afterEach(() => {
++        filteredCollections$.next([]);
++      });
++
++      it("offers the searched collections of the vault in view", () => {
++        filteredCollections$.next([alpha, gamma]);
++        listTableSvc.setScope({
++          type: VaultScopeType.Organization,
++          organizationId: "org-1" as OrganizationId,
++        });
++        fixture.detectChanges();
++
++        expect(component["matchingCollections"]()).toEqual([alpha]);
++      });
++
++      it("renders the matches beneath the toolbar's filters", async () => {
++        filteredCollections$.next([alpha, gamma]);
++        fixture.detectChanges();
++        await fixture.whenStable();
++        fixture.detectChanges();
++
++        expect(renderedMatches()).toEqual(["Alpha", "Gamma"]);
++      });
++
++      it("narrows to the picked collection, clears the search, and stops offering matches", async () => {
++        filteredCollections$.next([alpha, gamma]);
++        fixture.detectChanges();
++        await fixture.whenStable();
++        component["searchText"] = "a";
++
++        component.selectCollection(alpha);
++        fixture.detectChanges();
++
++        expect(component["tableEl"]()!.filterValues()).toEqual(
++          expect.objectContaining({ collection: ["col-1"] }),
++        );
++        expect(component["searchText"]).toBe("");
++        expect(component["matchingCollections"]()).toEqual([]);
++        expect(renderedMatches()).toEqual([]);
++      });
++    });
++
+     describe("nesting collections and folders", () => {
+       /** An option by value, read from any chip's own option tree — plain rows, never stamped
+        * as `bit-filter-option` components. */
+diff --git a/apps/browser/src/vault/popup/components/vault/vault-popup-list-table/vault-popup-list-table.component.ts b/apps/browser/src/vault/popup/components/vault/vault-popup-list-table/vault-popup-list-table.component.ts
+index 8e5a43d5af2deaa6f03cdeaf98f5c021ee0d6a94..0eefc6ea88e8a1d93ddf616de0d54f484da25fcc 100644
+--- a/apps/browser/src/vault/popup/components/vault/vault-popup-list-table/vault-popup-list-table.component.ts
++++ b/apps/browser/src/vault/popup/components/vault/vault-popup-list-table/vault-popup-list-table.component.ts
+@@ -99,6 +99,7 @@ import { ItemMoreOptionsComponent } from "../item-more-options/item-more-options
+ import { VaultFiltersTourComponent } from "../vault-filters-tour/vault-filters-tour.component";
+ import { VAULT_ROW_ICON, VaultRowIcon } from "../vault-row-slots/vault-row-icon.token";
+ import { VaultRowSubtitleComponent } from "../vault-row-slots/vault-row-subtitle.component";
++import { VaultSearchCollectionsComponent } from "../vault-search-collections/vault-search-collections.component";
+ 
+ /** Collects every value in a {@link FilterOptionNode} subtree, depth-first. */
+ function subtreeValues(nodes: readonly FilterOptionNode<string>[]): string[] {
+@@ -152,6 +153,7 @@ function contributedFilter(filter: VaultItemFilter | null): VaultItemFilter | nu
+     BitRowGroupComponent,
+     BitTableToolbarComponent,
+     VaultFiltersTourComponent,
++    VaultSearchCollectionsComponent,
+     ScrollCollapseSourceDirective,
+     CollapseOnScrollDirective,
+     FilterMenuModule,
+@@ -420,6 +422,27 @@ export class VaultPopupListTableComponent {
+   protected readonly collectionOptions = computed(() =>
+     collectionOptionsInScope(this.collectionTree(), this.listTableService.vaultScope(), this.nav()),
+   );
++  /** Collections whose names match the search text, across every vault. */
++  private readonly searchedCollections = toSignal(
++    this.vaultPopupItemsService.filteredCollections$,
++    { initialValue: [] as CollectionView[] },
++  );
++
++  /**
++   * The search's collection matches the collection chip can narrow to: those of the vault in
++   * view, offered only until a collection is selected.
++   */
++  protected readonly matchingCollections = computed(() => {
++    const values = this.tableEl()?.filterValues() as { collection?: string[] } | undefined;
++    if (values?.collection?.length) {
++      return [];
++    }
++    const inScope = new Set<string | undefined>(
++      this.collectionOptions().map((option) => option.value?.id),
++    );
++    return this.searchedCollections().filter((collection) => inScope.has(collection.id));
++  });
++
+   /** Every active cipher, before the search narrows it — the folder chip's options come from here. */
+   private readonly activeCiphers = toSignal(this.vaultPopupItemsService.activeCiphers$, {
+     initialValue: [] as PopupCipherViewLike[],
+@@ -742,6 +765,18 @@ export class VaultPopupListTableComponent {
+     this.onSearchTextChanged();
+   }
+ 
++  /** Narrows the list to a collection picked from the search matches, then clears the search. */
++  selectCollection(collection: CollectionView) {
++    const control = this.tableEl()
++      ?.filterControls()
++      .find((filterControl) => filterControl.key() === "collection");
++    if (!control) {
++      return;
++    }
++    control.setValue([collection.id]);
++    this.clearSearch();
++  }
++
+   /** Clears every chip filters — the empty slot's "Clear all". */
+   clearFilters() {
+     for (const control of this.tableEl()?.filterControls() ?? []) {
+diff --git a/apps/browser/src/vault/popup/components/vault/vault-popup-list-table/vault-popup-list-table.stories.ts b/apps/browser/src/vault/popup/components/vault/vault-popup-list-table/vault-popup-list-table.stories.ts
+index b193b91bb14edd3c0f239744d1aa95f962afdbc6..c3d1f0908eea03f86e859bac1b089dfd03805392 100644
+--- a/apps/browser/src/vault/popup/components/vault/vault-popup-list-table/vault-popup-list-table.stories.ts
++++ b/apps/browser/src/vault/popup/components/vault/vault-popup-list-table/vault-popup-list-table.stories.ts
+@@ -481,6 +481,7 @@ const buildProviders = (args: StoryArgs) => {
+         filteredCiphers$: filteredCiphers$.asObservable(),
+         // The folder chip's options come from the unsearched list, not the rendered rows.
+         activeCiphers$: filteredCiphers$.asObservable(),
++        filteredCollections$: of([]),
+         loading$: loading$.asObservable(),
+         searchText,
+         hasSearchText$: hasSearchText$.asObservable(),
+diff --git a/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.html b/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.html
+index 0deca5c2f5b9d7a85fe23bf33a2da7a093810c9a..6053a8d31b5996cb7570e846990976978b5e4ee0 100644
+--- a/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.html
++++ b/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.html
+@@ -1,24 +1,45 @@
+ @if (collections().length > 0) {
+-  <bit-section [disableMargin]="true">
+-    <bit-section-header>
+-      <h2 bitTypography="h6">{{ "collections" | i18n }}</h2>
+-    </bit-section-header>
+-    <bit-item-group>
++  @if (compact()) {
++    <div
++      data-testid="collection-matches"
++      class="tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-px-3 tw-pb-2 tw-max-h-20 tw-overflow-y-auto"
++    >
++      <span class="tw-text-muted tw-text-xs">{{ "sharedFolders" | i18n }}</span>
+       @for (collection of collections(); track collection.id) {
+-        <bit-item class="tw-group/vault-item">
+-          <button
+-            bit-item-content
+-            type="button"
+-            (click)="openCollection(collection)"
+-            class="tw-h-[52px]"
+-          >
+-            <div slot="start" class="tw-justify-start tw-w-7 tw-flex">
+-              <bit-icon name="bwi-folder" class="tw-text-main"></bit-icon>
+-            </div>
+-            <span data-testid="collection-name">{{ collection.name }}</span>
+-          </button>
+-        </bit-item>
++        <button
++          bitButton
++          type="button"
++          buttonType="secondary"
++          size="small"
++          startIcon="bwi-shared-folder"
++          (click)="collectionSelected.emit(collection)"
++        >
++          <span data-testid="collection-name">{{ collection.name }}</span>
++        </button>
+       }
+-    </bit-item-group>
+-  </bit-section>
++    </div>
++  } @else {
++    <bit-section [disableMargin]="true">
++      <bit-section-header>
++        <h2 bitTypography="h6">{{ "collections" | i18n }}</h2>
++      </bit-section-header>
++      <bit-item-group>
++        @for (collection of collections(); track collection.id) {
++          <bit-item class="tw-group/vault-item">
++            <button
++              bit-item-content
++              type="button"
++              (click)="collectionSelected.emit(collection)"
++              class="tw-h-[52px]"
++            >
++              <div slot="start" class="tw-justify-start tw-w-7 tw-flex">
++                <bit-icon name="bwi-folder" class="tw-text-main"></bit-icon>
++              </div>
++              <span data-testid="collection-name">{{ collection.name }}</span>
++            </button>
++          </bit-item>
++        }
++      </bit-item-group>
++    </bit-section>
++  }
+ }
+diff --git a/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.spec.ts b/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.spec.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..6e3e8722755b47807f6ce12a2e1fe589b18d38ab
+--- /dev/null
++++ b/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.spec.ts
+@@ -0,0 +1,70 @@
++import { ComponentFixture, TestBed } from "@angular/core/testing";
++import { mock } from "jest-mock-extended";
++
++import { CollectionView } from "@bitwarden/common/admin-console/models/collections";
++import { I18nService } from "@bitwarden/common/platform/abstractions/i18n.service";
++
++import { VaultSearchCollectionsComponent } from "./vault-search-collections.component";
++
++describe("VaultSearchCollectionsComponent", () => {
++  let fixture: ComponentFixture<VaultSearchCollectionsComponent>;
++
++  const collections = [
++    { id: "col-1", name: "Alpha" },
++    { id: "col-2", name: "Beta" },
++  ] as unknown as CollectionView[];
++
++  const element = (): HTMLElement => fixture.nativeElement;
++  const names = (): string[] =>
++    Array.from(element().querySelectorAll<HTMLElement>('[data-testid="collection-name"]')).map(
++      (el) => el.textContent?.trim() ?? "",
++    );
++
++  beforeEach(async () => {
++    await TestBed.configureTestingModule({
++      imports: [VaultSearchCollectionsComponent],
++      providers: [
++        { provide: I18nService, useValue: mock<I18nService>({ t: (key: string) => key }) },
++      ],
++    }).compileComponents();
++
++    fixture = TestBed.createComponent(VaultSearchCollectionsComponent);
++    fixture.componentRef.setInput("collections", collections);
++  });
++
++  it("lists the collections in a section by default", () => {
++    fixture.detectChanges();
++
++    expect(element().querySelector("bit-section")).toBeTruthy();
++    expect(element().querySelector('[data-testid="collection-matches"]')).toBeNull();
++    expect(names()).toEqual(["Alpha", "Beta"]);
++  });
++
++  it("lays the collections out as one row of buttons when compact", () => {
++    fixture.componentRef.setInput("compact", true);
++    fixture.detectChanges();
++
++    expect(element().querySelector("bit-section")).toBeNull();
++    expect(element().querySelector('[data-testid="collection-matches"]')).toBeTruthy();
++    expect(names()).toEqual(["Alpha", "Beta"]);
++  });
++
++  it.each([false, true])("emits the picked collection (compact: %s)", (compact) => {
++    const picked: CollectionView[] = [];
++    fixture.componentInstance.collectionSelected.subscribe((collection) => picked.push(collection));
++    fixture.componentRef.setInput("compact", compact);
++    fixture.detectChanges();
++
++    element().querySelectorAll("button")[1].click();
++
++    expect(picked).toEqual([collections[1]]);
++  });
++
++  it("renders nothing when there are no collections", () => {
++    fixture.componentRef.setInput("collections", []);
++    fixture.componentRef.setInput("compact", true);
++    fixture.detectChanges();
++
++    expect(element().querySelector("button")).toBeNull();
++  });
++});
+diff --git a/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.ts b/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.ts
+index 99a55534cfe5cd87a681e307aa1747b915ccfcd7..0e2a2b4c0eb817fdf91eeb4872ce5e13d76a32bf 100644
+--- a/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.ts
++++ b/apps/browser/src/vault/popup/components/vault/vault-search-collections/vault-search-collections.component.ts
+@@ -1,9 +1,10 @@
+ import { CommonModule } from "@angular/common";
+-import { Component, ChangeDetectionStrategy, inject, input } from "@angular/core";
++import { booleanAttribute, ChangeDetectionStrategy, Component, input, output } from "@angular/core";
+ 
+ import { JslibModule } from "@bitwarden/angular/jslib.module";
+ import { CollectionView } from "@bitwarden/common/admin-console/models/collections";
+ import {
++  ButtonModule,
+   SectionComponent,
+   SectionHeaderComponent,
+   ItemModule,
+@@ -11,14 +12,13 @@ import {
+   TypographyModule,
+ } from "@bitwarden/components";
+ 
+-import { VaultPopupItemsService } from "../../../services/vault-popup-items.service";
+-
+ @Component({
+   selector: "app-vault-search-collections",
+   standalone: true,
+   imports: [
+     CommonModule,
+     JslibModule,
++    ButtonModule,
+     SectionComponent,
+     SectionHeaderComponent,
+     ItemModule,
+@@ -31,9 +31,12 @@ import { VaultPopupItemsService } from "../../../services/vault-popup-items.serv
+ export class VaultSearchCollectionsComponent {
+   readonly collections = input<CollectionView[]>([]);
+ 
+-  private readonly vaultPopupItemsService = inject(VaultPopupItemsService);
++  /**
++   * Renders one wrapping row of buttons instead of a list section. The list table's toolbar sits
++   * outside the scrolled rows, so its matches have to stay short.
++   */
++  readonly compact = input(false, { transform: booleanAttribute });
+ 
+-  openCollection(collection: CollectionView): void {
+-    this.vaultPopupItemsService.openCollection(collection);
+-  }
++  /** Emits the collection the user picked from the matches. */
++  readonly collectionSelected = output<CollectionView>();
+ }
+diff --git a/apps/browser/src/vault/popup/components/vault/vault.component.html b/apps/browser/src/vault/popup/components/vault/vault.component.html
+index 86d794c91ca459fe4e13e3be527192f90516a935..78c37871d51be4918155598b5887dc535958a0bc 100644
+--- a/apps/browser/src/vault/popup/components/vault/vault.component.html
++++ b/apps/browser/src/vault/popup/components/vault/vault.component.html
+@@ -199,6 +199,7 @@
+             @if (matchingCollections.length > 0) {
+               <app-vault-search-collections
+                 [collections]="matchingCollections"
++                (collectionSelected)="openCollection($event)"
+               ></app-vault-search-collections>
+             }
+             <app-vault-list-items-container
+diff --git a/apps/browser/src/vault/popup/components/vault/vault.component.ts b/apps/browser/src/vault/popup/components/vault/vault.component.ts
+index 5cdaf878bb0cca2427b85d9390c1882d0eecdba0..48473bf4dd7d2cdbbe706d915095c7eaae17f937 100644
+--- a/apps/browser/src/vault/popup/components/vault/vault.component.ts
++++ b/apps/browser/src/vault/popup/components/vault/vault.component.ts
+@@ -41,6 +41,7 @@ import {
+   AutomaticUserConfirmationService,
+ } from "@bitwarden/auto-confirm/angular";
+ import { InternalOrganizationServiceAbstraction } from "@bitwarden/common/admin-console/abstractions/organization/organization.service.abstraction";
++import { CollectionView } from "@bitwarden/common/admin-console/models/collections";
+ import { AccountService } from "@bitwarden/common/auth/abstractions/account.service";
+ import { getUserId } from "@bitwarden/common/auth/services/account.service";
+ import { BillingAccountProfileStateService } from "@bitwarden/common/billing/abstractions";
+@@ -241,6 +242,11 @@ export class VaultComponent implements OnInit, OnDestroy {
+    */
+   protected filteredCollections$ = this.vaultPopupItemsService.filteredCollections$;
+ 
++  /** Filters the legacy list to a collection picked from the search matches. */
++  protected openCollection(collection: CollectionView) {
++    this.vaultPopupItemsService.openCollection(collection);
++  }
++
+   protected showPremiumSpotlight$ = combineLatest([
+     this.activeUserId$.pipe(
+       switchMap((userId) =>
+diff --git a/libs/components/src/table/v2/bit-table-toolbar.component.html b/libs/components/src/table/v2/bit-table-toolbar.component.html
+index 859cb43f0a9929623f092a0a7c679d8f5713e0a1..19fa3e7ba7d672920bec20b605b470b6d33d3548 100644
+--- a/libs/components/src/table/v2/bit-table-toolbar.component.html
++++ b/libs/components/src/table/v2/bit-table-toolbar.component.html
+@@ -109,4 +109,6 @@
+       ></bit-chip-group>
+     </div>
+   }
++  <!-- A full-width row of the consumer's own, beneath the search and filters. -->
++  <ng-content select="[slot=below]"></ng-content>
+ </div>
